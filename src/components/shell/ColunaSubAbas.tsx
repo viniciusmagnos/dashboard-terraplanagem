@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { Sparkles } from "lucide-react";
 import type { SubTab } from "./nav";
 
 /**
@@ -43,6 +44,14 @@ export function ColunaSubAbas({
                 style={ativo ? { borderColor: accent, color: accent } : undefined}
               >
                 {s.label}
+                {s.badge === "ia" && (
+                  <span
+                    className="ml-1.5 inline-flex items-center gap-0.5 align-middle rounded px-1 py-px text-[9px] font-medium border border-manta/40 text-manta"
+                    title="Aba criada pelo assistente IA"
+                  >
+                    <Sparkles size={8} /> IA
+                  </span>
+                )}
               </button>
             </Fragment>
           );

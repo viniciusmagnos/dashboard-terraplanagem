@@ -3,6 +3,7 @@ import {
   lazy,
   useCallback,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -20,7 +21,7 @@ import { MainNavigation } from "../components/shell/MainNavigation";
 import { ColunaSubAbas } from "../components/shell/ColunaSubAbas";
 import { Watermark } from "../components/shell/Watermark";
 import { Footer } from "../components/shell/Footer";
-import { NAV, type TopTabId } from "../components/shell/nav";
+import { navComDinamicas, type TopTabId } from "../components/shell/nav";
 
 // Abas app-local existentes
 import { VisaoTab } from "../components/tabs/VisaoTab";
@@ -50,6 +51,7 @@ import { TempoCaminhoTab } from "../components/tabs/TempoCaminhoTab";
 import { OtimizacoesTab } from "../components/tabs/OtimizacoesTab";
 import { SimultaneidadeTab } from "../components/tabs/SimultaneidadeTab";
 import { RelatorioCompletoTab, ExportarPacoteTab } from "../components/tabs/RelatorioExtras";
+import { FontesXmlTab } from "../components/tabs/FontesXmlTab";
 // Painéis do core (vendorados) reutilizados como sub-abas
 import { SecoesTab, type GeoSel } from "../components/landxml/geometria/SecoesTab";
 import { GeotecniaTab } from "../components/landxml/geotecnia/GeotecniaTab";
@@ -63,6 +65,11 @@ import { DmePanel } from "../components/landxml/cenarios/DmePanel";
 // Primitivos app-local
 import { SeletorCenarioBar } from "../components/ui/SeletorCenarioBar";
 import { EmptyStateAguardando } from "../components/ui/EmptyStateAguardando";
+// Assistente IA embutido (AskCAD modo landxml_dashboard)
+import { AssistentePanel } from "../components/askcad/AssistentePanel";
+// Motor de componentes dinâmicos (layout dirigido pela Dashboard Spec)
+import { LayoutProvider, useLayout } from "../components/dynamic/LayoutContext";
+import { AbaDinamicaView } from "../components/dynamic/AbaDinamicaView";
 
 // three.js só entra no bundle quando a aba 3D abre
 const GeometriaTab = lazy(
@@ -134,7 +141,9 @@ export function EstudoShell() {
 
   return (
     <EstudoProvider pacote={pacote}>
-      <ShellInterno pacote={pacote} onPacoteAtualizado={setPacote} />
+      <LayoutProvider>
+        <ShellInterno pacote={pacote} onPacoteAtualizado={setPacote} />
+      </LayoutProvider>
     </EstudoProvider>
   );
 }
@@ -167,19 +176,32 @@ function ShellInterno({
   onPacoteAtualizado: (p: MtpPacote) => void;
 }) {
   const { syncStatus } = useEstudo();
+  const { spec } = useLayout();
   const [top, setTop] = useState<TopTabId>("dashboard");
   const [sub, setSub] = useState<string>("visao");
   const [geoSel, setGeoSel] = useState<GeoSel>({ eixoId: null, sta: null });
 
-  const secao = NAV.find((t) => t.id === top)!;
+  // NAV estático + sub-abas dinâmicas criadas pelo assistente (badge IA).
+  const nav = useMemo(() => navComDinamicas(spec.abas), [spec.abas]);
+  const secao = nav.find((t) => t.id === top)!;
   const accent = secao.accent;
   const nSond = geotecniaDe(pacote)?.resumo.n_total ?? 0;
 
+  // Aba dinâmica removida (pelo usuário/agente) enquanto ativa → primeira sub.
+  useEffect(() => {
+    if (!secao.subs.some((s) => s.id === sub)) setSub(secao.subs[0].id);
+  }, [secao, sub]);
+
   const trocarTop = (id: TopTabId) => {
     setTop(id);
-    const alvo = NAV.find((t) => t.id === id)!;
+    const alvo = nav.find((t) => t.id === id)!;
     setSub(alvo.subs[0].id);
   };
+
+  const navegar = useCallback((topId: TopTabId, subId: string) => {
+    setTop(topId);
+    setSub(subId);
+  }, []);
 
   const irParaSecao = useCallback(
     (sta: number, eixoId?: string | null) => {
@@ -243,6 +265,7 @@ function ShellInterno({
         "Carregando o motor 3D…",
       ),
     "banco-dados": () => <BancoCenariosTab accent={accent} />,
+    "fontes-xml": () => <FontesXmlTab accent={accent} />,
     // Cenários
     "cen-visao": () => <CenarioVisaoTab accent={accent} />,
     "cen-premissas": () => <PremissasTab accent={accent} />,
@@ -289,7 +312,12 @@ function ShellInterno({
         subtitle={`${pacote.schema} v${pacote.schema_version}${
           pacote.projeto.cliente ? ` · ${pacote.projeto.cliente}` : ""
         }`}
-        right={<SyncBadge status={syncStatus} />}
+        right={
+          <div className="flex items-center gap-2">
+            <AssistentePanel onNavigate={navegar} onIrParaSecao={irParaSecao} />
+            <SyncBadge status={syncStatus} />
+          </div>
+        }
       />
       <MainNavigation active={top} onChange={trocarTop} />
 
@@ -308,12 +336,15 @@ function ShellInterno({
 
           <div className="flex-1 min-w-0 space-y-4">
             {top === "cenarios" && <SeletorCenarioBar accent={accent} />}
-            {R[sub]?.() ?? (
-              <EmptyStateAguardando
-                bloco={sub}
-                descricao="Selecione uma sub-aba."
-              />
-            )}
+            {R[sub]?.() ??
+              (spec.abas.some((a) => a.id === sub) ? (
+                <AbaDinamicaView abaId={sub} />
+              ) : (
+                <EmptyStateAguardando
+                  bloco={sub}
+                  descricao="Selecione uma sub-aba."
+                />
+              ))}
           </div>
         </div>
       </main>

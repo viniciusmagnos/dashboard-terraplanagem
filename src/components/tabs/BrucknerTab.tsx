@@ -1,9 +1,13 @@
 import { useMemo } from "react";
+import { X } from "lucide-react";
 import { fmt } from "../../lib/format";
 import { staToKmLabel } from "../../lib/mtp";
 import { BrucknerChart } from "../landxml/BrucknerChart";
 import { BrucknerLegenda } from "../landxml/BrucknerLegenda";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
+import { useLayoutSeguro } from "../dynamic/LayoutContext";
+import { useSeriesResolvidas } from "../../lib/dashboard-bindings";
+import { ChipIa } from "../dynamic/ChipIa";
 
 /** Brückner e DMT: curva de massas + segmentos/residuais + faixas de DMT. */
 export function BrucknerTab({
@@ -13,6 +17,31 @@ export function BrucknerTab({
 }) {
   const { pacote } = useEstudo();
   const br = pacote.bruckner ?? null;
+
+  // Séries extras do assistente (overlays da Dashboard Spec, grafico="bruckner").
+  const layout = useLayoutSeguro();
+  const overlays = useMemo(
+    () => (layout?.spec.overlays ?? []).filter((o) => o.grafico === "bruckner"),
+    [layout?.spec.overlays],
+  );
+  const resolvidas = useSeriesResolvidas(overlays);
+  const seriesExtras = useMemo(
+    () =>
+      overlays.map((o) => ({
+        id: o.id,
+        nome: o.nome || o.id,
+        cor: o.cor,
+        tracejada: o.tracejada,
+        curve: resolvidas.get(o.id)?.valor ?? [],
+      })),
+    [overlays, resolvidas],
+  );
+  const overlaysComErro = overlays
+    .map((o) => {
+      const erro = resolvidas.get(o.id)?.erro;
+      return erro ? `${o.nome || o.id}: ${erro}` : null;
+    })
+    .filter((e): e is string => e != null);
 
   const totais = useMemo(() => {
     if (!br) return { vol: 0, mom: 0 };
@@ -34,7 +63,41 @@ export function BrucknerTab({
         curve={br.curve}
         barreiras={pacote.barreiras}
         onStationClick={pacote.geometria ? onIrParaSecao : undefined}
+        seriesExtras={seriesExtras}
       />
+
+      {overlays.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <ChipIa />
+          <span className="text-muted-foreground">Séries do assistente:</span>
+          {overlays.map((o) => (
+            <span
+              key={o.id}
+              className="inline-flex items-center gap-1 rounded border border-border bg-surface px-2 py-0.5"
+            >
+              {o.nome || o.id}
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm(`Remover a série "${o.nome || o.id}"?`)) {
+                    void layout?.removerSerie("bruckner", o.id);
+                  }
+                }}
+                className="text-muted-foreground hover:text-danger"
+                title="Remover série"
+                aria-label={`Remover série ${o.nome || o.id}`}
+              >
+                <X size={11} />
+              </button>
+            </span>
+          ))}
+          {overlaysComErro.length > 0 && (
+            <span className="text-warning">
+              (indisponíveis: {overlaysComErro.join("; ")})
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="bg-surface border border-border rounded-lg overflow-hidden">

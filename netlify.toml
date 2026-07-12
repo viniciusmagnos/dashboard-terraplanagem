@@ -13,6 +13,14 @@
   command = "npm run build"
   publish = "dist"
 
+# O chat do assistente (AskCAD) usa SSE de longa duração — o proxy do Netlify
+# NÃO serve para isso (timeout ~30s + buffering). Em prod o front fala
+# cross-origin direto com o mantaapi; o backend askcad libera CORS para o
+# domínio deste site (auth é Bearer, sem cookies). Por isso NÃO há redirect
+# /api/askcad/* aqui — apenas a env de build abaixo.
+[build.environment]
+  VITE_ASKCAD_API_URL = "https://mantaapi.mantaassociados.com/askcad/api"
+
 [[redirects]]
   from = "/api/landxml/*"
   to = "https://mantaapi.mantaassociados.com/landxml/api/:splat"

@@ -28,6 +28,17 @@ export default defineConfig({
         timeout: 600000,
         rewrite: (p) => p.replace(/^\/api\/landxml/, "/landxml/api"),
       },
+      // /api/askcad/chat/... → mantaapi/askcad/api/chat/... (SSE ok: o
+      // http-proxy do Vite streama sem buffer). Em PROD este caminho NÃO é
+      // proxiado (Netlify bufferiza/expira SSE) — o build usa
+      // VITE_ASKCAD_API_URL cross-origin (ver netlify.toml).
+      "/api/askcad": {
+        target: MANTAAPI,
+        changeOrigin: true,
+        secure: true,
+        timeout: 600000,
+        rewrite: (p) => p.replace(/^\/api\/askcad/, "/askcad/api"),
+      },
       // /api/sondagem/... → mantaapi/sondagem/api/...
       "/api/sondagem": {
         target: MANTAAPI,

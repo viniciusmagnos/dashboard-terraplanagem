@@ -2,6 +2,7 @@ import { fmt } from "../../lib/format";
 import { staToKmLabel } from "../../lib/mtp";
 import { ProvChip } from "../landxml/ProvChip";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
+import { SlotBlocos } from "../dynamic/SlotBlocos";
 
 /** Visão geral: KPIs do projeto + tabela de eixos + warnings do pacote. */
 export function VisaoTab() {
@@ -28,6 +29,7 @@ export function VisaoTab() {
 
   return (
     <div className="space-y-4">
+      <SlotBlocos slot="visao.topo" />
       <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
         {kpis.map((kpi) => (
           <div key={kpi.rot} className="bg-surface border border-border rounded-lg p-3">
@@ -88,6 +90,8 @@ export function VisaoTab() {
           ))}
         </div>
       )}
+
+      <SlotBlocos slot="visao.rodape" />
     </div>
   );
 }

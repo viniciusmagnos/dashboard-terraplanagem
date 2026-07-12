@@ -19,6 +19,7 @@ import {
 } from "../lib/estudo-api";
 import { getUsersByIds } from "../lib/users-search-api";
 import { exportDashboardPackage, uploadFile } from "../lib/landxml-api";
+import { adotarFontesDeSessao } from "../lib/fontes-api";
 import { validarPacote } from "../lib/mtp";
 import { fmt } from "../lib/format";
 import { Header } from "../components/shell/Header";
@@ -165,6 +166,15 @@ export function EstudosPage() {
       const texto = JSON.stringify(bruto);
       const p = validarPacote(bruto);
       const { estudo_id } = await criarEstudo(texto, { nome: p.projeto.nome });
+      // Adota os .xml BRUTOS das sessões recém-usadas como fontes do estudo
+      // (habilita o assistente IA a explorar cotas/seções/volumes no bruto).
+      // Best-effort: falha aqui não bloqueia a criação — dá para anexar depois.
+      try {
+        setEtapa("Anexando os LandXML brutos ao estudo (fontes da IA)…");
+        await adotarFontesDeSessao(estudo_id, sessionIds);
+      } catch {
+        /* anexável depois na aba Dados → LandXML bruto */
+      }
       navigate(`/estudo/${estudo_id}`);
     } catch (e) {
       setErro(e instanceof Error ? e.message : String(e));

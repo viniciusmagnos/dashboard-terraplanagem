@@ -4,6 +4,7 @@ import { KpiCard } from "../landxml/KpiCard";
 import { ProvChip } from "../landxml/ProvChip";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
+import { SlotBlocos } from "../dynamic/SlotBlocos";
 
 const pct = (a: number | null | undefined, b: number | null | undefined): number | null =>
   a != null && b != null && b !== 0 ? ((a - b) / b) * 100 : null;
@@ -89,6 +90,8 @@ export function CenarioVisaoTab({ accent }: { accent: string }) {
           </table>
         </div>
       </div>
+
+      <SlotBlocos slot="cen-visao.rodape" />
     </div>
   );
 }

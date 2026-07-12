@@ -28,6 +28,8 @@ export interface SubTab {
   label: string;
   /** Rótulo de grupo (divisória na coluna de sub-abas). */
   grupo?: string;
+  /** Marca visual de origem — "ia" = sub-aba criada pelo assistente. */
+  badge?: "ia";
 }
 
 export interface TopTab {
@@ -37,6 +39,40 @@ export interface TopTab {
   /** Cor de acento da seção (tom de terra Manta). */
   accent: string;
   subs: SubTab[];
+}
+
+/** Shape mínimo de uma aba dinâmica (espelha AbaDinamica da Dashboard Spec —
+ * estrutural de propósito para não acoplar o nav ao módulo do spec). */
+export interface AbaDinamicaNav {
+  id: string;
+  titulo: string;
+  top: TopTabId;
+  grupo: string;
+}
+
+/**
+ * NAV estático + sub-abas dinâmicas criadas pelo assistente, anexadas ao fim
+ * da seção `top` correspondente sob o grupo delas (default "Análises IA").
+ * As dinâmicas ganham badge "ia" (chip na coluna de sub-abas).
+ */
+export function navComDinamicas(abas: AbaDinamicaNav[]): TopTab[] {
+  if (!abas.length) return NAV;
+  return NAV.map((t) => {
+    const dinamicas = abas.filter((a) => a.top === t.id);
+    if (!dinamicas.length) return t;
+    return {
+      ...t,
+      subs: [
+        ...t.subs,
+        ...dinamicas.map((a) => ({
+          id: a.id,
+          label: a.titulo,
+          grupo: a.grupo,
+          badge: "ia" as const,
+        })),
+      ],
+    };
+  });
 }
 
 export const NAV: TopTab[] = [
@@ -76,6 +112,7 @@ export const NAV: TopTab[] = [
       { id: "secoes", label: "Seções transversais" },
       { id: "corredor3d", label: "3D do corredor" },
       { id: "banco-dados", label: "Banco de dados" },
+      { id: "fontes-xml", label: "LandXML bruto (IA)" },
     ],
   },
   {
