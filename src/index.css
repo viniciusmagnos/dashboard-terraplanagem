@@ -1,0 +1,209 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Manta Brand Colors */
+  --color-manta: #E07B3D;
+  --color-manta-hover: #C45A2B;
+  --color-manta-warm: #8B4A2D;
+  --color-manta-dark: #5D3A1A;
+
+  /* Base (dark) – overridden by .light below */
+  --color-background: #0F1117;
+  --color-foreground: #EDEAE5;
+  --color-surface: #181B23;
+  --color-surface-hover: #1F2330;
+  --color-elevated: #252830;
+  --color-muted: #2D3139;
+  --color-muted-foreground: #8B919A;
+  --color-border: #2A2E37;
+  --color-border-subtle: #22252D;
+
+  /* Semantic */
+  --color-primary: #E07B3D;
+  --color-primary-foreground: #ffffff;
+  --color-destructive: #EF4444;
+  --color-accent: #1F2330;
+  --color-accent-foreground: #EDEAE5;
+  --color-card: #181B23;
+  --color-card-foreground: #EDEAE5;
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-info: #3B82F6;
+
+  /* Radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+}
+
+/* ── Light theme overrides ─────────────────────────────────── */
+
+:root.light {
+  --color-background: #F5F3F0;
+  --color-foreground: #1C1E23;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #E8E5E0;
+  --color-elevated: #E5E2DC;
+  --color-muted: #D0CCC4;
+  --color-muted-foreground: #4A4D55;
+  --color-border: #B8B2A8;
+  --color-border-subtle: #D0CCC4;
+
+  --color-accent: #E8E5E0;
+  --color-accent-foreground: #1C1E23;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #1C1E23;
+
+  /* Deeper semantics for light bg */
+  --color-manta: #C8601F;
+  --color-manta-hover: #A84A15;
+  --color-success: #15803D;
+  --color-danger: #B91C1C;
+  --color-info: #1D4ED8;
+  --color-warning: #A44B06;
+}
+
+/* ── Map SVG variables (not in @theme, just custom props) ── */
+
+:root {
+  --map-boundary-fill: rgba(37, 40, 48, 0.6);
+  --map-boundary-stroke: #3B3F4A;
+}
+:root.light {
+  --map-boundary-fill: rgba(140, 130, 118, 0.45);
+  --map-boundary-stroke: #7A7268;
+}
+
+/* ── Base body styles ──────────────────────────────────────── */
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Custom scrollbar ──────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-muted);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted-foreground);
+}
+
+/* ── Smooth transitions (exclude SVG to avoid breaking charts) */
+
+*:not(svg):not(svg *) {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Recharts compat ───────────────────────────────────────── */
+
+.recharts-wrapper svg {
+  color: inherit;
+}
+.recharts-wrapper path,
+.recharts-wrapper rect,
+.recharts-wrapper line,
+.recharts-wrapper circle {
+  transition: none;
+}
+
+/* ── Number input spinner removal ──────────────────────────── */
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ── Focus ring ────────────────────────────────────────────── */
+
+input:focus,
+select:focus,
+button:focus-visible {
+  outline: 2px solid var(--color-manta);
+  outline-offset: 1px;
+}
+
+select option {
+  background: var(--color-surface);
+  color: var(--color-foreground);
+}
+
+/* ── Skeleton shimmer animation ───────────────────────────── */
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--color-muted-foreground) 8%, transparent) 40%,
+    color-mix(in srgb, var(--color-muted-foreground) 12%, transparent) 50%,
+    color-mix(in srgb, var(--color-muted-foreground) 8%, transparent) 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+/* ── Blueprint grid background ────────────────────────────── */
+
+.blueprint-grid::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(
+    circle,
+    var(--color-manta) 0.5px,
+    transparent 0.5px
+  );
+  background-size: 24px 24px;
+  opacity: 0.03;
+}
+
+:root.light .blueprint-grid::before {
+  opacity: 0.02;
+}
+
+/* ── Glassmorphism utility ────────────────────────────────── */
+
+.glass {
+  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+}
+
+/* ── Reduced motion ───────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+  }
+}

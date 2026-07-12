@@ -1,0 +1,440 @@
+{
+ "_comment": "Golden de paridade do motor de cenários (lado TS é a referência). Regerar com: UPDATE_GOLDEN=1 npx vitest run src/lib/cenario-parity.test.ts",
+ "inputs": {
+  "cen_a": {
+   "id": "cen-a",
+   "nome": "Cenário A (física)",
+   "criadoEm": "2026-07-07T00:00:00.000Z",
+   "bruckner": {
+    "fillFactor": 1.25,
+    "baseline": "median",
+    "barreirasAtivas": [],
+    "barreirasExtras": [
+     {
+      "sta_m": 594000,
+      "nome": "OAE hipotética"
+     }
+    ]
+   },
+   "premissas": {
+    "cftPercent": 0.5,
+    "alargamentoCortePercent": 0.05,
+    "alargamentoAterroPercent": 0.03,
+    "dmtCorteAterro": 2,
+    "dmtJazidaNaFaixa": 0,
+    "dmtJazidaForaFaixa": 12,
+    "dmtBFNaFaixa": 0,
+    "dmtBFForaFaixa": 10,
+    "dmtCFT": 0.5,
+    "dmtSoloMole": 10
+   }
+  },
+  "cen_b": {
+   "id": "cen-b",
+   "nome": "Cenário B (entradas)",
+   "criadoEm": "2026-07-07T00:00:00.000Z",
+   "bruckner": {
+    "fillFactor": 1,
+    "baseline": "start",
+    "barreirasAtivas": [
+     594300,
+     596500
+    ],
+    "barreirasExtras": []
+   },
+   "premissas": {
+    "cftPercent": 1,
+    "alargamentoCortePercent": 0,
+    "alargamentoAterroPercent": 0,
+    "dmtCorteAterro": 2,
+    "dmtJazidaNaFaixa": 0,
+    "dmtJazidaForaFaixa": 10,
+    "dmtBFNaFaixa": 0,
+    "dmtBFForaFaixa": 10,
+    "dmtCFT": 0.5,
+    "dmtSoloMole": 10
+   }
+  },
+  "entradas_b_overrides": {
+   "cftBase": 50000,
+   "soloMole": 12000,
+   "pct3Cat": 0.08,
+   "transporte": 3.1
+  }
+ },
+ "expected": {
+  "caso_base": {
+   "volumes": {
+    "corteTotal": 820097.1,
+    "aterroFc": 811141.2,
+    "corte1Cat": 697082.1,
+    "corte2Cat": 82010,
+    "corte12Cat": 779092.1,
+    "corte3Cat": 41005,
+    "cftBase": 0,
+    "soloMole": 0,
+    "soloMoleCompactado": 0,
+    "jazidaTotal": 239673.95,
+    "bf1Cat": 255084.56,
+    "bf3Cat": 13426,
+    "bfTotal": 268510.56
+   },
+   "volumesCalc": {
+    "cftVolume": 0,
+    "jazidaNaFaixa": 0,
+    "jazidaForaFaixa": 239673.95,
+    "jazidaTotal": 239673.95,
+    "bfNaFaixa": 0,
+    "bfForaFaixa": 255084.56,
+    "bf3Cat": 13426,
+    "bfTotal": 268510.56,
+    "alargamentoCorteDisponivel": 0,
+    "alargamentoAterroDisponivel": 0
+   },
+   "momento": {
+    "corteAterro": 2413752.558,
+    "corteAterroFonte": "bruckner",
+    "jazidaNaFaixa": 0,
+    "jazidaForaFaixa": 2396739.5,
+    "bfNaFaixa": 0,
+    "bfForaFaixa": 2550845.6,
+    "bf3Cat": 134260,
+    "cft": 0,
+    "soloMole": 0,
+    "total": 7495597.658
+   },
+   "orcamento": {
+    "escavacao": {
+     "corte12": 7011828.899999999,
+     "corte3": 1168642.5,
+     "cft": 0,
+     "jazidaNaFaixa": 0,
+     "jazidaForaFaixa": 2157065.5500000003,
+     "soloMole": 0,
+     "subtotal": 10337536.95
+    },
+    "transporte": {
+     "momento": 7495597.658,
+     "custo": 20238113.6766
+    },
+    "compactacao": {
+     "aterro": 15411682.799999999,
+     "cft": 0,
+     "soloMole": 0,
+     "subtotal": 15411682.799999999
+    },
+    "royalty": {
+     "jazidaForaFaixa": 3595109.25,
+     "bfForaFaixa": 3826268.4,
+     "bf3Cat": 201390,
+     "subtotal": 7622767.65
+    },
+    "conformacaoBF": {
+     "naFaixa": 0,
+     "foraFaixa": 1020338.24,
+     "bf3Cat": 53704,
+     "subtotal": 1074042.24
+    },
+    "total": 54684143.3166
+   },
+   "bruckner_totals": {
+    "v_corte": 813277.45,
+    "v_aterro": 784440.84,
+    "volume_compensado": 384912.03,
+    "momento_m3km": 2413752.558,
+    "sobra_bota_fora": 268510.56,
+    "falta_emprestimo": 239673.95,
+    "dmt_medio_m": 2702.678
+   }
+  },
+  "cen_a": {
+   "volumes": {
+    "corteTotal": 820097.1,
+    "aterroFc": 811141.2,
+    "corte1Cat": 697082.1,
+    "corte2Cat": 82010,
+    "corte12Cat": 779092.1,
+    "corte3Cat": 41005,
+    "cftBase": 0,
+    "soloMole": 0,
+    "soloMoleCompactado": 0,
+    "jazidaTotal": 430004.848,
+    "bf1Cat": 249594.24800000002,
+    "bf3Cat": 13137,
+    "bfTotal": 262731.248
+   },
+   "volumesCalc": {
+    "cftVolume": 0,
+    "jazidaNaFaixa": 41005,
+    "jazidaForaFaixa": 388999.848,
+    "jazidaTotal": 430004.848,
+    "bfNaFaixa": 24334,
+    "bfForaFaixa": 225260.24800000002,
+    "bf3Cat": 13137,
+    "bfTotal": 262731.248,
+    "alargamentoCorteDisponivel": 41005,
+    "alargamentoAterroDisponivel": 24334
+   },
+   "momento": {
+    "corteAterro": 1756048.479,
+    "corteAterroFonte": "bruckner",
+    "jazidaNaFaixa": 0,
+    "jazidaForaFaixa": 4667998.176,
+    "bfNaFaixa": 0,
+    "bfForaFaixa": 2252602.4800000004,
+    "bf3Cat": 131370,
+    "cft": 0,
+    "soloMole": 0,
+    "total": 8808019.135000002
+   },
+   "orcamento": {
+    "escavacao": {
+     "corte12": 7011828.899999999,
+     "corte3": 1168642.5,
+     "cft": 0,
+     "jazidaNaFaixa": 369045,
+     "jazidaForaFaixa": 3500998.632,
+     "soloMole": 0,
+     "subtotal": 12050515.031999998
+    },
+    "transporte": {
+     "momento": 8808019.135000002,
+     "custo": 23781651.664500006
+    },
+    "compactacao": {
+     "aterro": 15411682.799999999,
+     "cft": 0,
+     "soloMole": 0,
+     "subtotal": 15411682.799999999
+    },
+    "royalty": {
+     "jazidaForaFaixa": 5834997.72,
+     "bfForaFaixa": 3378903.72,
+     "bf3Cat": 197055,
+     "subtotal": 9410956.44
+    },
+    "conformacaoBF": {
+     "naFaixa": 97336,
+     "foraFaixa": 901040.9920000001,
+     "bf3Cat": 52548,
+     "subtotal": 1050924.992
+    },
+    "total": 61705730.9285
+   },
+   "bruckner_totals": {
+    "v_corte": 813277.45,
+    "v_aterro": 784440.84,
+    "volume_compensado": 376664.989,
+    "momento_m3km": 1756048.479,
+    "sobra_bota_fora": 262731.248,
+    "falta_emprestimo": 430004.848,
+    "dmt_medio_m": 1642.086
+   },
+   "economia": {
+    "total": -7021587.611899994,
+    "percent": -12.840262617350925,
+    "cft": {
+     "escavacao": 0,
+     "compactacao": 0,
+     "transporte": 0,
+     "total": 0
+    },
+    "royalty": {
+     "jazida": 615075,
+     "botaFora": 365010,
+     "total": 980085
+    },
+    "transporte": -3543537.987900004
+   }
+  },
+  "caso_base_b": {
+   "volumes": {
+    "corteTotal": 820097.1,
+    "aterroFc": 811141.2,
+    "corte1Cat": 672479.1,
+    "corte2Cat": 82010,
+    "corte12Cat": 754489.1,
+    "corte3Cat": 65608,
+    "cftBase": 50000,
+    "soloMole": 12000,
+    "soloMoleCompactado": 15000,
+    "jazidaTotal": 239673.95,
+    "bf1Cat": 247029.56,
+    "bf3Cat": 21481,
+    "bfTotal": 268510.56
+   },
+   "volumesCalc": {
+    "cftVolume": 50000,
+    "jazidaNaFaixa": 0,
+    "jazidaForaFaixa": 239673.95,
+    "jazidaTotal": 239673.95,
+    "bfNaFaixa": 0,
+    "bfForaFaixa": 247029.56,
+    "bf3Cat": 21481,
+    "bfTotal": 268510.56,
+    "alargamentoCorteDisponivel": 0,
+    "alargamentoAterroDisponivel": 0
+   },
+   "momento": {
+    "corteAterro": 2413752.558,
+    "corteAterroFonte": "bruckner",
+    "jazidaNaFaixa": 0,
+    "jazidaForaFaixa": 2396739.5,
+    "bfNaFaixa": 0,
+    "bfForaFaixa": 2470295.6,
+    "bf3Cat": 214810,
+    "cft": 25000,
+    "soloMole": 120000,
+    "total": 7640597.658
+   },
+   "orcamento": {
+    "escavacao": {
+     "corte12": 6790401.899999999,
+     "corte3": 1869828,
+     "cft": 550000,
+     "jazidaNaFaixa": 0,
+     "jazidaForaFaixa": 2157065.5500000003,
+     "soloMole": 102000,
+     "subtotal": 11469295.45
+    },
+    "transporte": {
+     "momento": 7640597.658,
+     "custo": 23685852.7398
+    },
+    "compactacao": {
+     "aterro": 15411682.799999999,
+     "cft": 950000,
+     "soloMole": 225000,
+     "subtotal": 16586682.799999999
+    },
+    "royalty": {
+     "jazidaForaFaixa": 3595109.25,
+     "bfForaFaixa": 3705443.4,
+     "bf3Cat": 322215,
+     "subtotal": 7622767.65
+    },
+    "conformacaoBF": {
+     "naFaixa": 0,
+     "foraFaixa": 988118.24,
+     "bf3Cat": 85924,
+     "subtotal": 1074042.24
+    },
+    "total": 60438640.87979999
+   },
+   "bruckner_totals": {
+    "v_corte": 813277.45,
+    "v_aterro": 784440.84,
+    "volume_compensado": 384912.03,
+    "momento_m3km": 2413752.558,
+    "sobra_bota_fora": 268510.56,
+    "falta_emprestimo": 239673.95,
+    "dmt_medio_m": 2702.678
+   }
+  },
+  "cen_b": {
+   "volumes": {
+    "corteTotal": 820097.1,
+    "aterroFc": 811141.2,
+    "corte1Cat": 672479.1,
+    "corte2Cat": 82010,
+    "corte12Cat": 754489.1,
+    "corte3Cat": 65608,
+    "cftBase": 50000,
+    "soloMole": 12000,
+    "soloMoleCompactado": 15000,
+    "jazidaTotal": 239673.95,
+    "bf1Cat": 247029.56,
+    "bf3Cat": 21481,
+    "bfTotal": 268510.56
+   },
+   "volumesCalc": {
+    "cftVolume": 50000,
+    "jazidaNaFaixa": 0,
+    "jazidaForaFaixa": 239673.95,
+    "jazidaTotal": 239673.95,
+    "bfNaFaixa": 0,
+    "bfForaFaixa": 247029.56,
+    "bf3Cat": 21481,
+    "bfTotal": 268510.56,
+    "alargamentoCorteDisponivel": 0,
+    "alargamentoAterroDisponivel": 0
+   },
+   "momento": {
+    "corteAterro": 2413752.558,
+    "corteAterroFonte": "bruckner",
+    "jazidaNaFaixa": 0,
+    "jazidaForaFaixa": 2396739.5,
+    "bfNaFaixa": 0,
+    "bfForaFaixa": 2470295.6,
+    "bf3Cat": 214810,
+    "cft": 25000,
+    "soloMole": 120000,
+    "total": 7640597.658
+   },
+   "orcamento": {
+    "escavacao": {
+     "corte12": 6790401.899999999,
+     "corte3": 1869828,
+     "cft": 550000,
+     "jazidaNaFaixa": 0,
+     "jazidaForaFaixa": 2157065.5500000003,
+     "soloMole": 102000,
+     "subtotal": 11469295.45
+    },
+    "transporte": {
+     "momento": 7640597.658,
+     "custo": 23685852.7398
+    },
+    "compactacao": {
+     "aterro": 15411682.799999999,
+     "cft": 950000,
+     "soloMole": 225000,
+     "subtotal": 16586682.799999999
+    },
+    "royalty": {
+     "jazidaForaFaixa": 3595109.25,
+     "bfForaFaixa": 3705443.4,
+     "bf3Cat": 322215,
+     "subtotal": 7622767.65
+    },
+    "conformacaoBF": {
+     "naFaixa": 0,
+     "foraFaixa": 988118.24,
+     "bf3Cat": 85924,
+     "subtotal": 1074042.24
+    },
+    "total": 60438640.87979999
+   },
+   "bruckner_totals": {
+    "v_corte": 813277.45,
+    "v_aterro": 784440.84,
+    "volume_compensado": 384912.03,
+    "momento_m3km": 2413752.558,
+    "sobra_bota_fora": 268510.56,
+    "falta_emprestimo": 239673.95,
+    "dmt_medio_m": 2702.678
+   },
+   "economia": {
+    "total": 0,
+    "percent": 0,
+    "cft": {
+     "escavacao": 0,
+     "compactacao": 0,
+     "transporte": 0,
+     "total": 0
+    },
+    "royalty": {
+     "jazida": 0,
+     "botaFora": 0,
+     "total": 0
+    },
+    "transporte": 0
+   }
+  },
+  "dme_km": {
+   "jazida": 8.888888888888888,
+   "alargamento": 5.555555555555555,
+   "botaFora": 5.555555555555555
+  }
+ }
+}

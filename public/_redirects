@@ -1,0 +1,10 @@
+# Proxy same-origin para a API do Manta Hub (evita CORS). Regras específicas
+# ANTES do fallback SPA. Netlify processa este arquivo no diretório publicado.
+/api/landxml/*   https://mantaapi.mantaassociados.com/landxml/api/:splat   200
+/api/sondagem/*  https://mantaapi.mantaassociados.com/sondagem/api/:splat  200
+/api/auth/*      https://mantaapi.mantaassociados.com/auth/api/:splat      200
+/oauth/*         https://hub.mantaassociados.com/v1/oauth/:splat           200
+/.well-known/*   https://hub.mantaassociados.com/.well-known/:splat        200
+
+# SPA fallback (/, /login, /callback, /estudo/:id)
+/*               /index.html                                               200

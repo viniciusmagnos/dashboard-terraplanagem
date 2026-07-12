@@ -1,0 +1,50 @@
+# Deploy do dashboard de terraplenagem (Netlify).
+#
+# Proxy same-origin para a API do Manta Hub — assim o front nunca fala
+# cross-origin e não há fricção de CORS (mesmo padrão do vercel.json do hub).
+#   /api/landxml/*  → mantaapi/landxml/api/*   (estudos, upload, export/dashboard)
+#   /api/sondagem/* → mantaapi/sondagem/api/*  (extração de sondagens)
+#   /api/auth/*     → mantaapi/auth/api/*       (login/refresh — fallback)
+#   /oauth/*        → hub/v1/oauth/*            (token exchange do SSO)
+#   /.well-known/*  → hub/.well-known/*         (discovery OAuth)
+# O /v1/oauth/authorize é navegação top-level direta ao hub (ver src/lib/oauth.ts).
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/api/landxml/*"
+  to = "https://mantaapi.mantaassociados.com/landxml/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/sondagem/*"
+  to = "https://mantaapi.mantaassociados.com/sondagem/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/auth/*"
+  to = "https://mantaapi.mantaassociados.com/auth/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/oauth/*"
+  to = "https://hub.mantaassociados.com/v1/oauth/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/.well-known/*"
+  to = "https://hub.mantaassociados.com/.well-known/:splat"
+  status = 200
+  force = true
+
+# SPA fallback — todas as rotas do app (/, /login, /callback, /estudo/:id) servem o index.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

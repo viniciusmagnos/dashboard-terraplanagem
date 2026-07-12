@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard de Terraplenagem — Manta</title>
+    <script>
+      // Aplica o tema imediatamente para evitar flash. Default = system
+      // (segue o SO). O usuário pode alternar claro/escuro; a preferência fica
+      // em localStorage["manta-theme"] (mesma chave do Manta Hub).
+      (function () {
+        var t = localStorage.getItem("manta-theme") || "system";
+        var r =
+          t === "system"
+            ? window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light"
+            : t;
+        document.documentElement.classList.add(r);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
