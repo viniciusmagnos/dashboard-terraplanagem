@@ -63,7 +63,7 @@ export function PainelParametrosBruckner() {
           value={params.fillFactor}
           disabled={!editavel}
           onChange={(e) => set({ fillFactor: Number(e.target.value) })}
-          className="w-full mt-1.5 accent-manta disabled:opacity-40"
+          className="w-full mt-1.5 accent-cyan-500 disabled:opacity-40"
         />
         <p className="text-xs text-muted-foreground">
           m³ de corte por 1 m³c de aterro (empolamento)
@@ -80,7 +80,7 @@ export function PainelParametrosBruckner() {
             onChange={(e) =>
               set({ baseline: e.target.checked ? "median" : "start" })
             }
-            className="accent-manta"
+            className="accent-cyan-500"
           />
           {params.baseline === "median"
             ? "Mediana (mín. momento)"

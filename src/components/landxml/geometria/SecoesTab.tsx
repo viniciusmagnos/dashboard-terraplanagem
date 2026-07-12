@@ -161,7 +161,7 @@ export function SecoesTab({
               step={0.5}
               value={exagero}
               onChange={(e) => setExagero(Number(e.target.value))}
-              className="w-36 accent-manta"
+              className="w-36 accent-cyan-500"
             />
           </label>
           <label className="flex items-center gap-2 text-sm">

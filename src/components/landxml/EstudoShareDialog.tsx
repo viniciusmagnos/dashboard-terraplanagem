@@ -188,7 +188,7 @@ export function EstudoShareDialog({
               onClick={() => setTab("invite")}
               className={`flex-1 px-3 py-2 transition-colors ${
                 tab === "invite"
-                  ? "text-manta border-b-2 border-manta font-semibold"
+                  ? "text-cyan-400 border-b-2 border-cyan-500 font-semibold"
                   : "text-muted-foreground hover:bg-surface-hover"
               }`}
             >
@@ -198,7 +198,7 @@ export function EstudoShareDialog({
               onClick={() => setTab("list")}
               className={`flex-1 px-3 py-2 transition-colors ${
                 tab === "list"
-                  ? "text-manta border-b-2 border-manta font-semibold"
+                  ? "text-cyan-400 border-b-2 border-cyan-500 font-semibold"
                   : "text-muted-foreground hover:bg-surface-hover"
               }`}
             >
@@ -270,7 +270,7 @@ export function EstudoShareDialog({
                       <button
                         onClick={() => void convidar(u)}
                         disabled={convidando === u.id}
-                        className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded bg-manta hover:bg-manta text-white disabled:opacity-50 transition-colors"
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded bg-cyan-600 hover:bg-cyan-500 text-white disabled:opacity-50 transition-colors"
                       >
                         {convidando === u.id ? (
                           <Loader2 size={11} className="animate-spin" />
@@ -313,7 +313,7 @@ export function EstudoShareDialog({
                       <div className="text-sm truncate flex items-center gap-1.5">
                         {rotulo}
                         {p.is_self && (
-                          <span className="text-[10px] text-manta">
+                          <span className="text-[10px] text-cyan-400">
                             (você)
                           </span>
                         )}

@@ -33,7 +33,7 @@ export function EstacaoPicker({
         step={1}
         value={i}
         onChange={(e) => onIndice(Number(e.target.value))}
-        className="flex-1 accent-manta"
+        className="flex-1 accent-cyan-500"
       />
       <button
         onClick={() => onIndice(Math.min(stas.length - 1, i + 1))}

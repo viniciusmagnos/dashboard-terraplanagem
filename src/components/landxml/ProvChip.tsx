@@ -15,7 +15,7 @@ export const PROV_ESTILO: Record<
   },
   computed: {
     rotulo: "calculado",
-    classe: "bg-manta/10 text-manta border-manta/30",
+    classe: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
   },
   manual: {
     rotulo: "entrada manual",

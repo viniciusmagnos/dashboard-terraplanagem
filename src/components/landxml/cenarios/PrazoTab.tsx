@@ -210,7 +210,7 @@ export function PrazoTab() {
             step={1}
             value={params.turnos}
             onChange={(e) => setParams((p) => ({ ...p, turnos: Number(e.target.value) }))}
-            className="w-full mt-2 accent-manta"
+            className="w-full mt-2 accent-cyan-500"
           />
         </div>
         <div>
@@ -226,7 +226,7 @@ export function PrazoTab() {
             onChange={(e) =>
               setParams((p) => ({ ...p, diasSemanais: Number(e.target.value) }))
             }
-            className="w-full mt-2 accent-manta"
+            className="w-full mt-2 accent-cyan-500"
           />
         </div>
         <div>
@@ -284,7 +284,7 @@ export function PrazoTab() {
               type="radio"
               checked={params.modo === "paralelo"}
               onChange={() => setParams((p) => ({ ...p, modo: "paralelo" }))}
-              className="accent-manta"
+              className="accent-cyan-500"
             />
             paralelas (prazo = maior serviço)
           </label>
@@ -293,7 +293,7 @@ export function PrazoTab() {
               type="radio"
               checked={params.modo === "sequencial"}
               onChange={() => setParams((p) => ({ ...p, modo: "sequencial" }))}
-              className="accent-manta"
+              className="accent-cyan-500"
             />
             sequenciais (prazo = soma)
           </label>
@@ -330,7 +330,7 @@ export function PrazoTab() {
                           type="checkbox"
                           checked={s.incluir}
                           onChange={(e) => setServico(s.id, { incluir: e.target.checked })}
-                          className="accent-manta"
+                          className="accent-cyan-500"
                         />
                         {s.rotulo}
                       </label>

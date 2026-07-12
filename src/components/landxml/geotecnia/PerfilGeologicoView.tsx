@@ -173,7 +173,7 @@ function PerfilSVG({ eixo }: { eixo: MtpPerfilEixo }) {
           <span className="inline-block w-3 h-0.5 bg-emerald-500" /> terreno
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-0.5 bg-manta" /> greide
+          <span className="inline-block w-3 h-0.5 bg-cyan-400" /> greide
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-3 h-0.5 bg-amber-400" /> topo RAM (2ª cat)

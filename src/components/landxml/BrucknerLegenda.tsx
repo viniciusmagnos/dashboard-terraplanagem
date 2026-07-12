@@ -14,7 +14,7 @@ export function BrucknerLegenda({ compacta = false }: { compacta?: boolean }) {
         className="w-full flex items-center gap-2 px-4 py-2.5 text-left font-medium"
       >
         {aberta ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-        <Info size={15} className="text-manta" />
+        <Info size={15} className="text-cyan-500" />
         Como ler o diagrama de Brückner
       </button>
       {aberta && (
@@ -53,7 +53,7 @@ export function BrucknerLegenda({ compacta = false }: { compacta?: boolean }) {
             viadutos que o material não cruza — dividem a curva em segmentos
             independentes. O residual de cada segmento vira{" "}
             <span className="text-amber-400">sobra → bota-fora</span> ou{" "}
-            <span className="text-manta">falta → empréstimo</span>.
+            <span className="text-cyan-400">falta → empréstimo</span>.
           </p>
         </div>
       )}

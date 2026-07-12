@@ -207,7 +207,7 @@ export function OrcamentoTab() {
             <Legend wrapperStyle={{ fontSize: 12 }} />
             <Bar dataKey="Caso base" fill="#64748b" radius={[3, 3, 0, 0]} />
             {cenarioAtivoId && (
-              <Bar dataKey={nomeAtivo} fill="#C8601F" radius={[3, 3, 0, 0]} />
+              <Bar dataKey={nomeAtivo} fill="#06b6d4" radius={[3, 3, 0, 0]} />
             )}
           </BarChart>
         </ResponsiveContainer>

@@ -5,6 +5,7 @@
  */
 import {
   CartesianGrid,
+  Legend,
   Line,
   LineChart,
   ReferenceLine,
@@ -14,6 +15,17 @@ import {
   YAxis,
 } from "recharts";
 import type { MtpBarreira } from "../../lib/mtp";
+
+/** Série extra sobreposta à curva (ex.: hipóteses do assistente IA). Cada
+ * série carrega a própria curva — a amostragem não precisa casar com a
+ * principal (o eixo X é numérico compartilhado). */
+export interface BrucknerSerieExtra {
+  id: string;
+  nome: string;
+  cor?: string;
+  tracejada?: boolean;
+  curve: [number, number][];
+}
 
 const fmtM3 = (v: number) =>
   Math.abs(v) >= 1e6
@@ -28,15 +40,21 @@ interface BrucknerChartProps {
   altura?: number;
   /** Clique na curva → estação (m) — usado p/ abrir a seção transversal. */
   onStationClick?: (staM: number) => void;
+  /** Séries adicionais (retrocompatível — sem elas o gráfico é idêntico). */
+  seriesExtras?: BrucknerSerieExtra[];
 }
+
+const CORES_EXTRAS = ["#C8601F", "#8B5CF6", "#22C55E", "#EAB308", "#EC4899"];
 
 export function BrucknerChart({
   curve,
   barreiras = [],
   altura = 320,
   onStationClick,
+  seriesExtras,
 }: BrucknerChartProps) {
   const data = curve.map(([sta, y]) => ({ km: sta / 1000, ordenada: y }));
+  const extras = (seriesExtras ?? []).filter((s) => s.curve.length > 0);
   if (!data.length) {
     return (
       <div className="text-sm text-muted-foreground p-6 text-center">
@@ -48,7 +66,6 @@ export function BrucknerChart({
     <div className="bg-surface border border-border rounded-lg p-3">
       <ResponsiveContainer width="100%" height={altura}>
         <LineChart
-          data={data}
           margin={{ top: 8, right: 16, bottom: 4, left: 8 }}
           onClick={(st) => {
             if (onStationClick && st?.activeLabel != null) {
@@ -62,19 +79,21 @@ export function BrucknerChart({
             dataKey="km"
             type="number"
             domain={["dataMin", "dataMax"]}
+            allowDuplicatedCategory={false}
             tickFormatter={(v: number) => v.toFixed(1)}
             fontSize={11}
             label={{ value: "km", position: "insideBottomRight", offset: -2, fontSize: 11 }}
           />
           <YAxis tickFormatter={fmtM3} fontSize={11} width={56} />
           <Tooltip
-            formatter={(v) => [
+            formatter={(v, name) => [
               `${Number(v ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: 0 })} m³`,
-              "Ordenada",
+              String(name ?? "Ordenada"),
             ]}
             labelFormatter={(km) => `km ${Number(km ?? 0).toFixed(3)}`}
             contentStyle={{ fontSize: 12 }}
           />
+          {extras.length > 0 && <Legend wrapperStyle={{ fontSize: 11 }} />}
           <ReferenceLine y={0} stroke="var(--color-muted-foreground)" strokeDasharray="4 4" />
           {barreiras.map((b) => (
             <ReferenceLine
@@ -91,13 +110,29 @@ export function BrucknerChart({
             />
           ))}
           <Line
+            data={data}
             type="monotone"
             dataKey="ordenada"
-            stroke="#C8601F"
+            name="Ordenada"
+            stroke="#06b6d4"
             strokeWidth={2}
             dot={false}
             isAnimationActive={false}
           />
+          {extras.map((s, i) => (
+            <Line
+              key={s.id}
+              data={s.curve.map(([sta, y]) => ({ km: sta / 1000, ordenada: y }))}
+              type="monotone"
+              dataKey="ordenada"
+              name={s.nome || s.id}
+              stroke={s.cor || CORES_EXTRAS[i % CORES_EXTRAS.length]}
+              strokeWidth={2}
+              strokeDasharray={s.tracejada === false ? undefined : "6 4"}
+              dot={false}
+              isAnimationActive={false}
+            />
+          ))}
         </LineChart>
       </ResponsiveContainer>
       <p className="text-xs text-muted-foreground mt-1 px-1">

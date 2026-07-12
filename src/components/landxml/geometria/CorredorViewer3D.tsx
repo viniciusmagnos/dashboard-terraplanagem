@@ -249,7 +249,7 @@ export function CorredorViewer3D({
       <div ref={containerRef} className="absolute inset-0" />
 
       <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur text-xs text-white">
-        <Mountain size={14} className="text-manta" />
+        <Mountain size={14} className="text-cyan-400" />
         <span className="font-semibold uppercase tracking-wider">3D do corredor</span>
         {stats && (
           <span className="text-zinc-400 ml-1">
@@ -280,7 +280,7 @@ export function CorredorViewer3D({
                 ? "Botão esquerdo: MOVER (clique para voltar a girar)"
                 : "Botão esquerdo: GIRAR (clique para mover/pan)"
             }
-            className={`p-1 rounded hover:bg-white/10 ${modoPan ? "bg-manta/40" : ""}`}
+            className={`p-1 rounded hover:bg-white/10 ${modoPan ? "bg-cyan-500/40" : ""}`}
           >
             {modoPan ? <Hand size={14} /> : <Rotate3d size={14} />}
           </button>
@@ -316,7 +316,7 @@ export function CorredorViewer3D({
               onChange={(e) =>
                 setVisiveis((prev) => ({ ...prev, [k]: e.target.checked }))
               }
-              className="accent-manta"
+              className="accent-cyan-500"
             />
             {rotulo}
           </label>

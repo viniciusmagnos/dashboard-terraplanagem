@@ -22,7 +22,7 @@ function CardDme({ titulo, info }: { titulo: string; info: DmeInfo }) {
   return (
     <div className="bg-surface border border-border rounded-lg p-3 space-y-1.5">
       <p className="text-xs text-muted-foreground">{titulo}</p>
-      <p className="text-lg font-semibold text-manta">{info.resultado}</p>
+      <p className="text-lg font-semibold text-cyan-400">{info.resultado}</p>
       <p className="text-[11px] text-muted-foreground">
         <span className="text-foreground">{info.formula}</span>
         <br />
@@ -101,7 +101,7 @@ export function DmePanel() {
                 type="monotone"
                 dataKey="jazida"
                 name="Abrir jazida externa (escav. + royalty)"
-                stroke="#C8601F"
+                stroke="#06b6d4"
                 dot={false}
                 strokeWidth={2}
                 strokeDasharray="6 3"

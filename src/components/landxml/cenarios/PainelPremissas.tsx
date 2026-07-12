@@ -128,7 +128,7 @@ export function PainelPremissas() {
             {ativo.momento.corteAterroFonte === "bruckner" ? (
               <p className="text-sm bg-background border border-border rounded px-2.5 py-1.5 flex-1 text-muted-foreground">
                 DMT real (Brückner):{" "}
-                <span className="text-manta font-medium">
+                <span className="text-cyan-400 font-medium">
                   {dmtRealKm != null ? `${fmt(dmtRealKm, 2)} km` : "—"}
                 </span>{" "}
                 — calculado da curva, não é premissa

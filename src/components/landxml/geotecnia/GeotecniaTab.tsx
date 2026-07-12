@@ -409,7 +409,7 @@ export function GeotecniaTab({
                   key={s.id + s.arquivo}
                   onClick={() => setAtiva(s.id)}
                   className={`border-t border-border cursor-pointer ${
-                    ativa === s.id ? "bg-manta/10" : "hover:bg-surface-hover"
+                    ativa === s.id ? "bg-cyan-500/10" : "hover:bg-surface-hover"
                   }`}
                 >
                   <td className="px-3 py-1.5 font-medium whitespace-nowrap">
@@ -443,7 +443,7 @@ export function GeotecniaTab({
                               ev.stopPropagation();
                               onIrParaSecao(s.eixo_id as string, s.sta_m as number);
                             }}
-                            className="ml-2 text-[11px] text-manta hover:underline"
+                            className="ml-2 text-[11px] text-cyan-400 hover:underline"
                           >
                             ver seção
                           </button>
@@ -460,7 +460,7 @@ export function GeotecniaTab({
                     {fmt(s.cota_m, 2)}
                     {s.cota_fonte === "rt_locada" && (
                       <span
-                        className="ml-1 text-[9px] text-manta/80 align-top"
+                        className="ml-1 text-[9px] text-cyan-500/80 align-top"
                         title="Cota locada (RT de investigações)"
                       >
                         loc
@@ -780,7 +780,7 @@ function PerfilFuros({
             <span className="inline-block w-3 h-0.5 bg-emerald-500" /> terreno
           </span>
           <span className="flex items-center gap-1">
-            <span className="inline-block w-3 h-0.5 bg-manta" /> greide
+            <span className="inline-block w-3 h-0.5 bg-cyan-400" /> greide
           </span>
           <span className="flex items-center gap-1">
             <span className="inline-block w-2 h-2 bg-amber-400" /> solo mole

@@ -160,7 +160,7 @@ export function ComparativoTab() {
                   return next;
                 })
               }
-              className="accent-manta"
+              className="accent-cyan-500"
             />
             {c.nome}
           </label>

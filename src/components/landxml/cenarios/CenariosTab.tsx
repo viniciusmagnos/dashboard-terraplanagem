@@ -35,7 +35,7 @@ function BarraCenarios() {
   const chip = (ativo: boolean) =>
     `px-3 py-1.5 rounded-full text-sm border transition-colors ${
       ativo
-        ? "bg-manta border-manta text-white font-medium"
+        ? "bg-cyan-600 border-cyan-600 text-white font-medium"
         : "border-border text-muted-foreground hover:text-foreground hover:bg-surface-hover"
     }`;
 
