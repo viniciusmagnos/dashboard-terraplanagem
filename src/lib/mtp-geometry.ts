@@ -131,7 +131,7 @@ export function secaoBounds(secao: MtpGeoSecao): SecaoBounds {
   let offMax = -Infinity;
   let zMin = Infinity;
   let zMax = -Infinity;
-  for (const flat of [secao.terreno, secao.plataforma]) {
+  for (const flat of [secao.terreno, secao.plataforma, secao.cft ?? []]) {
     for (let i = 0; i + 1 < flat.length; i += 2) {
       offMin = Math.min(offMin, flat[i]);
       offMax = Math.max(offMax, flat[i]);

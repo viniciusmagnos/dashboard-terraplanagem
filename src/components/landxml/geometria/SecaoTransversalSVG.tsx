@@ -14,6 +14,8 @@ const COR_PLATAFORMA = "#ef4444";
 const COR_CORTE = "#f97316";
 const COR_ATERRO = "#22c55e";
 const COR_ALARG = "#f59e0b";
+const COR_CFT = "#c084fc"; // camada final de terraplenagem (violeta, sob a plataforma)
+const COR_COTA = "#e2e8f0"; // linhas de cota (largura/altura) — claro p/ fundo escuro
 const COR_CAT: Record<number, string> = { 1: "#34d399", 2: "#f59e0b", 3: "#f43f5e" };
 
 /** Furo de sondagem próximo à seção (desenhado na posição do offset). */
@@ -90,6 +92,17 @@ export function SecaoTransversalSVG({
     let larguraCorte = 0;
     let corteOffMin = Infinity;
     let corteOffMax = -Infinity;
+    let aterroOffMin = Infinity;
+    let aterroOffMax = -Infinity;
+    // maior desnível vertical (profundidade de corte / altura de aterro) e onde ocorre
+    let maxCorte = 0;
+    let offCorteMax = 0;
+    let maxAterro = 0;
+    let offAterroMax = 0;
+    const registraDesnivel = (o: number, f: number) => {
+      if (f > maxCorte) { maxCorte = f; offCorteMax = o; }
+      else if (-f > maxAterro) { maxAterro = -f; offAterroMax = o; }
+    };
     for (let i = 0; i < xs.length - 1; i++) {
       const oL = xs[i];
       const oR = xs[i + 1];
@@ -100,11 +113,16 @@ export function SecaoTransversalSVG({
       if (tL == null || tR == null || dL == null || dR == null) continue;
       const fL = tL - dL;
       const fR = tR - dR;
+      registraDesnivel(oL, fL);
+      registraDesnivel(oR, fR);
       const registra = (o0: number, o1: number, corte: boolean) => {
         if (corte) {
           larguraCorte += o1 - o0;
           corteOffMin = Math.min(corteOffMin, o0);
           corteOffMax = Math.max(corteOffMax, o1);
+        } else {
+          aterroOffMin = Math.min(aterroOffMin, o0);
+          aterroOffMax = Math.max(aterroOffMax, o1);
         }
       };
       if (fL * fR < 0) {
@@ -146,6 +164,44 @@ export function SecaoTransversalSVG({
       }
     }
 
+    // linha da CFT (violeta) — restrita à largura da plataforma, ~0,6 m abaixo
+    const cftPares = toPares(secao.cft ?? []);
+    const cftPath = cftPares.length >= 2 ? path(cftPares) : null;
+
+    // cota da operação dominante: largura (footprint) + altura (maior desnível)
+    let cota: {
+      op: string; larg: number; alt: number;
+      xa: number; xb: number; yLarg: number;
+      xv: number; yt: number; yd: number; xMid: number;
+    } | null = null;
+    {
+      const domCorte = (secao.area_corte ?? 0) >= (secao.area_aterro ?? 0);
+      const oMin = domCorte ? corteOffMin : aterroOffMin;
+      const oMax = domCorte ? corteOffMax : aterroOffMax;
+      const alt = domCorte ? maxCorte : maxAterro;
+      const offAt = domCorte ? offCorteMax : offAterroMax;
+      if (Number.isFinite(oMin) && oMax - oMin > 0.5 && alt > 0.05) {
+        const zt = interpLinha(secao.terreno, offAt) ?? 0;
+        const zd = interpLinha(secao.plataforma, offAt) ?? 0;
+        const zLow = Math.min(
+          interpLinha(secao.terreno, oMin) ?? Infinity,
+          interpLinha(secao.plataforma, oMin) ?? Infinity,
+          interpLinha(secao.terreno, oMax) ?? Infinity,
+          interpLinha(secao.plataforma, oMax) ?? Infinity,
+          zt, zd,
+        );
+        cota = {
+          op: domCorte ? "corte" : "aterro",
+          larg: oMax - oMin,
+          alt,
+          xa: X(oMin), xb: X(oMax),
+          yLarg: Math.min(Y(zLow) + 14, altura - 22),
+          xv: X(offAt), yt: Y(zt), yd: Y(zd),
+          xMid: (X(oMin) + X(oMax)) / 2,
+        };
+      }
+    }
+
     // régua de cotas (3 ticks) e de offsets
     const zTicks = [b.zMin, (b.zMin + b.zMax) / 2, b.zMax];
     const offTicks: number[] = [];
@@ -158,6 +214,8 @@ export function SecaoTransversalSVG({
       quads,
       terrenoPath: path(terreno),
       plataformaPath: path(plataforma),
+      cftPath,
+      cota,
       cx: X(0),
       yTop: Y(b.zMax),
       yBot: Y(b.zMin),
@@ -222,6 +280,21 @@ export function SecaoTransversalSVG({
       viewBox={`0 0 ${largura} ${altura}`}
       className="w-full h-auto bg-slate-900 rounded-lg"
     >
+      <defs>
+        {/* ponta de seta das linhas de cota (largura/altura) */}
+        <marker
+          id="cota-seta"
+          viewBox="0 0 10 10"
+          markerWidth={7}
+          markerHeight={7}
+          refX={8}
+          refY={5}
+          orient="auto-start-reverse"
+          markerUnits="userSpaceOnUse"
+        >
+          <path d="M0,1 L9,5 L0,9" fill="none" stroke={COR_COTA} strokeWidth={1.4} />
+        </marker>
+      </defs>
       {/* hachuras corte/aterro */}
       {geom.quads.map((q, i) => (
         <polygon
@@ -259,6 +332,46 @@ export function SecaoTransversalSVG({
       {/* linhas */}
       <path d={geom.terrenoPath} fill="none" stroke={COR_TERRENO} strokeWidth={2} />
       <path d={geom.plataformaPath} fill="none" stroke={COR_PLATAFORMA} strokeWidth={2} />
+      {geom.cftPath && (
+        <path
+          d={geom.cftPath}
+          fill="none"
+          stroke={COR_CFT}
+          strokeWidth={1.5}
+          strokeDasharray="2 3"
+        />
+      )}
+      {/* cotas de largura / altura do corte ou aterro dominante */}
+      {geom.cota && (
+        <g>
+          <line
+            x1={geom.cota.xa} y1={geom.cota.yLarg}
+            x2={geom.cota.xb} y2={geom.cota.yLarg}
+            stroke={COR_COTA} strokeWidth={1.2}
+            markerStart="url(#cota-seta)" markerEnd="url(#cota-seta)"
+          />
+          <text
+            x={geom.cota.xMid} y={geom.cota.yLarg - 3}
+            textAnchor="middle" fontSize={10} fill={COR_COTA}
+            paintOrder="stroke" stroke="#0f172a" strokeWidth={3} strokeLinejoin="round"
+          >
+            larg {fmt(geom.cota.larg, 1)} m
+          </text>
+          <line
+            x1={geom.cota.xv} y1={geom.cota.yt}
+            x2={geom.cota.xv} y2={geom.cota.yd}
+            stroke={COR_COTA} strokeWidth={1.2}
+            markerStart="url(#cota-seta)" markerEnd="url(#cota-seta)"
+          />
+          <text
+            x={geom.cota.xv + 5} y={(geom.cota.yt + geom.cota.yd) / 2}
+            fontSize={10} fill={COR_COTA}
+            paintOrder="stroke" stroke="#0f172a" strokeWidth={3} strokeLinejoin="round"
+          >
+            alt {fmt(geom.cota.alt, 1)} m
+          </text>
+        </g>
+      )}
       {/* cotas (z reais) */}
       {geom.zTicks.map((z) => (
         <g key={z}>
@@ -329,14 +442,22 @@ export function SecaoTransversalSVG({
       <text x={68} y={16} fill={COR_PLATAFORMA} fontSize={11}>plataforma</text>
       <text x={148} y={16} fill={COR_CORTE} fontSize={11}>corte</text>
       <text x={188} y={16} fill={COR_ATERRO} fontSize={11}>aterro</text>
+      {geom.cftPath && (
+        <text x={228} y={16} fill={COR_CFT} fontSize={11}>CFT</text>
+      )}
       {geom.dOff > 0 && (
-        <text x={228} y={16} fill={COR_ALARG} fontSize={11}>
+        <text x={262} y={16} fill={COR_ALARG} fontSize={11}>
           alargamento +{fmt(geom.dOff, 1)} m/lado
         </text>
       )}
       <text x={largura - 10} y={16} textAnchor="end" fill="#94a3b8" fontSize={11}>
         corte {fmt(secao.area_corte, 1)} m² · aterro {fmt(secao.area_aterro, 1)} m²
       </text>
+      {geom.cota && (
+        <text x={largura - 10} y={31} textAnchor="end" fill="#94a3b8" fontSize={11}>
+          larg {fmt(geom.cota.larg, 1)} m · alt {fmt(geom.cota.alt, 1)} m ({geom.cota.op})
+        </text>
+      )}
     </svg>
   );
 }

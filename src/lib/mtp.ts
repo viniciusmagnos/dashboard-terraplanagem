@@ -82,6 +82,9 @@ export interface MtpGeoSecao {
   /** flat [offset, z, ...] (z − z_offset_m); offset+ = lado direito */
   terreno: number[];
   plataforma: number[];
+  /** linha da CFT (camada final de terraplenagem, ~0,6 m sob a plataforma);
+   *  flat [offset, z, ...] restrito à largura da plataforma; ausente/[] se n/d */
+  cft?: number[];
   area_corte: number;
   area_aterro: number;
   /** source_mode do adaptador (auditoria) */
