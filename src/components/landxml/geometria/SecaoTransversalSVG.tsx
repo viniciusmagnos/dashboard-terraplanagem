@@ -167,6 +167,21 @@ export function SecaoTransversalSVG({
     // linha da CFT (violeta) — restrita à largura da plataforma, ~0,6 m abaixo
     const cftPares = toPares(secao.cft ?? []);
     const cftPath = cftPares.length >= 2 ? path(cftPares) : null;
+    // banda preenchida da camada CFT (entre o subleito/plataforma e a CFT)
+    const bandTop: [number, number][] = [];
+    const bandBot: [number, number][] = [];
+    for (const [o, zc] of cftPares) {
+      const zp = interpLinha(secao.plataforma, o);
+      if (zp == null) continue;
+      bandTop.push([o, zp]);
+      bandBot.push([o, zc]);
+    }
+    const cftBandPts =
+      bandTop.length >= 2
+        ? [...bandTop, ...bandBot.reverse()]
+            .map(([o, z]) => `${X(o).toFixed(1)},${Y(z).toFixed(1)}`)
+            .join(" ")
+        : null;
 
     // cota da operação dominante: largura (footprint) + altura (maior desnível)
     let cota: {
@@ -215,6 +230,7 @@ export function SecaoTransversalSVG({
       terrenoPath: path(terreno),
       plataformaPath: path(plataforma),
       cftPath,
+      cftBandPts,
       cota,
       cx: X(0),
       yTop: Y(b.zMax),
@@ -329,6 +345,10 @@ export function SecaoTransversalSVG({
         stroke="#64748b"
         strokeDasharray="4 4"
       />
+      {/* banda preenchida da camada CFT (subleito → CFT, ~0,60 m) */}
+      {geom.cftBandPts && (
+        <polygon points={geom.cftBandPts} fill={COR_CFT} fillOpacity={0.3} />
+      )}
       {/* linhas */}
       <path d={geom.terrenoPath} fill="none" stroke={COR_TERRENO} strokeWidth={2} />
       <path d={geom.plataformaPath} fill="none" stroke={COR_PLATAFORMA} strokeWidth={2} />
@@ -338,7 +358,7 @@ export function SecaoTransversalSVG({
           fill="none"
           stroke={COR_CFT}
           strokeWidth={1.5}
-          strokeDasharray="2 3"
+          strokeDasharray="3 2"
         />
       )}
       {/* cotas de largura / altura do corte ou aterro dominante */}
@@ -439,7 +459,7 @@ export function SecaoTransversalSVG({
       )}
       {/* legenda */}
       <text x={10} y={16} fill={COR_TERRENO} fontSize={11}>terreno</text>
-      <text x={68} y={16} fill={COR_PLATAFORMA} fontSize={11}>plataforma</text>
+      <text x={68} y={16} fill={COR_PLATAFORMA} fontSize={11}>subleito</text>
       <text x={148} y={16} fill={COR_CORTE} fontSize={11}>corte</text>
       <text x={188} y={16} fill={COR_ATERRO} fontSize={11}>aterro</text>
       {geom.cftPath && (
