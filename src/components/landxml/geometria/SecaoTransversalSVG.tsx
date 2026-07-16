@@ -15,6 +15,7 @@ const COR_CORTE = "#f97316";
 const COR_ATERRO = "#22c55e";
 const COR_ALARG = "#f59e0b";
 const COR_CFT = "#c084fc"; // camada final de terraplenagem (violeta, sob a plataforma)
+const COR_GREIDE = "#e5e7eb"; // greide/TOP (topo do pavimento) — cinza claro
 const COR_COTA = "#e2e8f0"; // linhas de cota (largura/altura) — claro p/ fundo escuro
 const COR_CAT: Record<number, string> = { 1: "#34d399", 2: "#f59e0b", 3: "#f43f5e" };
 
@@ -164,6 +165,9 @@ export function SecaoTransversalSVG({
       }
     }
 
+    // linha do greide/TOP (topo do pavimento) — presente no corte por TIN
+    const greidePares = toPares(secao.greide ?? []);
+    const greidePath = greidePares.length >= 2 ? path(greidePares) : null;
     // linha da CFT (violeta) — restrita à largura da plataforma, ~0,6 m abaixo
     const cftPares = toPares(secao.cft ?? []);
     const cftPath = cftPares.length >= 2 ? path(cftPares) : null;
@@ -229,6 +233,7 @@ export function SecaoTransversalSVG({
       quads,
       terrenoPath: path(terreno),
       plataformaPath: path(plataforma),
+      greidePath,
       cftPath,
       cftBandPts,
       cota,
@@ -351,6 +356,9 @@ export function SecaoTransversalSVG({
       )}
       {/* linhas */}
       <path d={geom.terrenoPath} fill="none" stroke={COR_TERRENO} strokeWidth={2} />
+      {geom.greidePath && (
+        <path d={geom.greidePath} fill="none" stroke={COR_GREIDE} strokeWidth={1.5} />
+      )}
       <path d={geom.plataformaPath} fill="none" stroke={COR_PLATAFORMA} strokeWidth={2} />
       {geom.cftPath && (
         <path
@@ -459,14 +467,17 @@ export function SecaoTransversalSVG({
       )}
       {/* legenda */}
       <text x={10} y={16} fill={COR_TERRENO} fontSize={11}>terreno</text>
-      <text x={68} y={16} fill={COR_PLATAFORMA} fontSize={11}>subleito</text>
-      <text x={148} y={16} fill={COR_CORTE} fontSize={11}>corte</text>
-      <text x={188} y={16} fill={COR_ATERRO} fontSize={11}>aterro</text>
+      <text x={66} y={16} fill={COR_PLATAFORMA} fontSize={11}>subleito</text>
+      {geom.greidePath && (
+        <text x={122} y={16} fill={COR_GREIDE} fontSize={11}>greide</text>
+      )}
+      <text x={176} y={16} fill={COR_CORTE} fontSize={11}>corte</text>
+      <text x={216} y={16} fill={COR_ATERRO} fontSize={11}>aterro</text>
       {geom.cftPath && (
-        <text x={228} y={16} fill={COR_CFT} fontSize={11}>CFT</text>
+        <text x={262} y={16} fill={COR_CFT} fontSize={11}>CFT</text>
       )}
       {geom.dOff > 0 && (
-        <text x={262} y={16} fill={COR_ALARG} fontSize={11}>
+        <text x={300} y={16} fill={COR_ALARG} fontSize={11}>
           alargamento +{fmt(geom.dOff, 1)} m/lado
         </text>
       )}
