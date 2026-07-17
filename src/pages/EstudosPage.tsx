@@ -8,13 +8,17 @@ import {
   FolderOpen,
   Loader2,
   Package,
+  RefreshCw,
+  Trash2,
   Upload,
   Users,
   X,
 } from "lucide-react";
 import {
   criarEstudo,
+  deletarEstudo,
   listarEstudos,
+  substituirPacote,
   type EstudoResumo,
 } from "../lib/estudo-api";
 import { getUsersByIds } from "../lib/users-search-api";
@@ -74,10 +78,13 @@ export function EstudosPage() {
   const [estudos, setEstudos] = useState<EstudoResumo[] | null>(null);
   const [donos, setDonos] = useState<Map<number, string>>(new Map());
   const [abrindo, setAbrindo] = useState<string | null>(null);
+  const [mutando, setMutando] = useState<string | null>(null);
+  const [substId, setSubstId] = useState<string | null>(null);
 
   const inputXml = useRef<HTMLInputElement>(null);
   const inputMtp = useRef<HTMLInputElement>(null);
   const inputSond = useRef<HTMLInputElement>(null);
+  const inputSubst = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let vivo = true;
@@ -211,6 +218,57 @@ export function EstudosPage() {
     navigate(`/estudo/${e.estudo_id}`);
   };
 
+  const recarregarEstudos = useCallback(async () => {
+    try {
+      setEstudos(await listarEstudos());
+    } catch {
+      /* mantém a lista atual em caso de falha transitória */
+    }
+  }, []);
+
+  // Substitui o pacote (.mtp.json) de um estudo EXISTENTE, preservando id e
+  // cenários — usa PUT /estudos/{id}/pacote (sem recriar → sem o 409 do import).
+  const substituirPacoteEstudo = useCallback(
+    async (estudoId: string, file: File) => {
+      setErro("");
+      setMutando(estudoId);
+      try {
+        const texto = await file.text();
+        validarPacote(texto); // valida o schema antes de enviar
+        await substituirPacote(estudoId, texto);
+        await recarregarEstudos();
+      } catch (e) {
+        setErro(e instanceof Error ? e.message : String(e));
+      } finally {
+        setMutando(null);
+        setSubstId(null);
+      }
+    },
+    [recarregarEstudos],
+  );
+
+  const excluirEstudo = useCallback(
+    async (e: EstudoResumo) => {
+      if (
+        !window.confirm(
+          `Excluir o estudo "${e.nome}"?\n\nRemove o pacote e os cenários salvos no servidor. Não pode ser desfeito.`,
+        )
+      )
+        return;
+      setErro("");
+      setMutando(e.estudo_id);
+      try {
+        await deletarEstudo(e.estudo_id);
+        await recarregarEstudos();
+      } catch (err) {
+        setErro(err instanceof Error ? err.message : String(err));
+      } finally {
+        setMutando(null);
+      }
+    },
+    [recarregarEstudos],
+  );
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Watermark />
@@ -274,21 +332,63 @@ export function EstudosPage() {
                       {new Date(e.updated_at).toLocaleDateString("pt-BR")}
                     </div>
                   </div>
-                  <button
-                    onClick={() => abrir(e)}
-                    disabled={abrindo !== null}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded hover:bg-surface-hover disabled:opacity-40 transition-colors shrink-0"
-                  >
-                    {abrindo === e.estudo_id ? (
-                      <Loader2 size={13} className="animate-spin" />
-                    ) : (
-                      <FolderOpen size={13} />
+                  <div className="flex items-center gap-2 shrink-0">
+                    {e.role !== "editor" && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setSubstId(e.estudo_id);
+                            inputSubst.current?.click();
+                          }}
+                          disabled={mutando !== null || abrindo !== null}
+                          title="Substituir o pacote (.mtp.json) deste estudo, mantendo os cenários"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs border border-border rounded hover:bg-surface-hover disabled:opacity-40 transition-colors"
+                        >
+                          {mutando === e.estudo_id ? (
+                            <Loader2 size={13} className="animate-spin" />
+                          ) : (
+                            <RefreshCw size={13} />
+                          )}
+                          Substituir
+                        </button>
+                        <button
+                          onClick={() => void excluirEstudo(e)}
+                          disabled={mutando !== null || abrindo !== null}
+                          title="Excluir o estudo do servidor"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs border border-danger/40 text-danger rounded hover:bg-danger/10 disabled:opacity-40 transition-colors"
+                        >
+                          <Trash2 size={13} />
+                          Excluir
+                        </button>
+                      </>
                     )}
-                    Abrir
-                  </button>
+                    <button
+                      onClick={() => abrir(e)}
+                      disabled={abrindo !== null || mutando !== null}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded hover:bg-surface-hover disabled:opacity-40 transition-colors"
+                    >
+                      {abrindo === e.estudo_id ? (
+                        <Loader2 size={13} className="animate-spin" />
+                      ) : (
+                        <FolderOpen size={13} />
+                      )}
+                      Abrir
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
+            <input
+              ref={inputSubst}
+              type="file"
+              accept=".json,.mtp.json,application/json"
+              className="hidden"
+              onChange={(ev) => {
+                const f = ev.target.files?.[0];
+                if (f && substId) void substituirPacoteEstudo(substId, f);
+                ev.currentTarget.value = "";
+              }}
+            />
           </div>
         ) : null}
 
