@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { ChevronDown, FileSpreadsheet, Loader2 } from "lucide-react";
 import { urlExportEstudo, type ExportTipo } from "../../lib/estudo-api";
-import { geotecniaDe } from "../../lib/mtp";
+import { drenagemDe, geotecniaDe } from "../../lib/mtp";
 import { useEstudo } from "./cenarios/EstudoContext";
 
 /** Espera o push debounced (300 ms) do EstudoContext chegar ao servidor. */
@@ -27,6 +27,7 @@ export function BotaoExportarExcel() {
 
   const temGeometria = !!pacote.geometria?.eixos?.length;
   const temSondagens = !!geotecniaDe(pacote)?.sondagens?.length;
+  const temDrenagem = !!drenagemDe(pacote)?.dispositivos?.length;
   const temBruckner = ativo.bruckner != null;
 
   const opcoes: Opcao[] = [
@@ -53,6 +54,12 @@ export function BotaoExportarExcel() {
       rotulo: "Sondagens (todas)",
       detalhe: "Furos, camadas e materiais por eixo",
       indisponivel: temSondagens ? null : "Pacote sem sondagens",
+    },
+    {
+      tipo: "drenagem",
+      rotulo: "Drenagem",
+      detalhe: "Dispositivos (bruto), travessias e bacias",
+      indisponivel: temDrenagem ? null : "Pacote sem bloco de drenagem",
     },
     {
       tipo: "orcamento",

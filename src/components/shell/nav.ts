@@ -4,6 +4,7 @@ import {
   GitCompare,
   Lightbulb,
   Mountain,
+  Droplets,
   FileText,
   type LucideIcon,
 } from "lucide-react";
@@ -21,6 +22,7 @@ export type TopTabId =
   | "cenarios"
   | "otimizacoes"
   | "geotecnia"
+  | "drenagem"
   | "relatorio";
 
 export interface SubTab {
@@ -158,6 +160,13 @@ export const NAV: TopTab[] = [
       { id: "geo-resumo", label: "Resumo por rodovia" },
       { id: "importar-sondagens", label: "Importar sondagens" },
     ],
+  },
+  {
+    id: "drenagem",
+    label: "Drenagem",
+    icon: Droplets,
+    accent: "#3F6E7D",
+    subs: [{ id: "dre-visao", label: "Dispositivos & travessias" }],
   },
   {
     id: "relatorio",

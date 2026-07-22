@@ -55,6 +55,7 @@ import { FontesXmlTab } from "../components/tabs/FontesXmlTab";
 // Painéis do core (vendorados) reutilizados como sub-abas
 import { SecoesTab, type GeoSel } from "../components/landxml/geometria/SecoesTab";
 import { GeotecniaTab } from "../components/landxml/geotecnia/GeotecniaTab";
+import { DrenagemTab } from "../components/landxml/drenagem/DrenagemTab";
 import { CenariosTab } from "../components/landxml/cenarios/CenariosTab";
 import { OrcamentoTab } from "../components/landxml/cenarios/OrcamentoTab";
 import { ComparativoTab } from "../components/landxml/cenarios/ComparativoTab";
@@ -296,6 +297,13 @@ function ShellInterno({
     "geo-resumo": () => <ResumoRodoviaGeoTab accent={accent} />,
     "importar-sondagens": () => (
       <ImportarSondagensTab pacote={pacote} onImportado={onPacoteAtualizado} />
+    ),
+    // Drenagem
+    "dre-visao": () => (
+      <DrenagemTab
+        pacote={pacote}
+        onIrParaSecao={(eixoId, sta) => irParaSecao(sta, eixoId)}
+      />
     ),
     // Relatório
     "rel-central": () => <RelatorioTab />,
