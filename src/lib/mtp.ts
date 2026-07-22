@@ -302,6 +302,111 @@ export function perfilGeologicoDe(
   return p;
 }
 
+/* ── Bloco drenagem (dispositivos das pranchas H1/H2) ─────── */
+
+export interface MtpDimensoesDispositivo {
+  diametro_m?: number | null;
+  largura_m?: number | null;
+  altura_m?: number | null;
+  /** rótulo original ("Ø 0,80", "2,50x2,00") */
+  secao?: string | null;
+}
+
+export type MtpDrenagemStatus =
+  | "projetado"
+  | "existente"
+  | "prolongamento"
+  | "asu"
+  | "asd";
+
+export interface MtpDispositivoDrenagem {
+  id: string;
+  /** sarjeta | valeta | dreno | descida | dissipador | bueiro | boca_caixa | meio_fio | outros */
+  familia: string;
+  tipo_codigo: string;
+  descricao?: string;
+  eixo_id?: string | null;
+  lado?: "E" | "D" | null;
+  sta_ini_m?: number | null;
+  sta_fim_m?: number | null;
+  extensao_m?: number | null;
+  quantidade: number;
+  unidade: "m" | "un";
+  dimensoes?: MtpDimensoesDispositivo | null;
+  status: MtpDrenagemStatus;
+  folha?: string;
+  /** pdf_planta | dwg | pdf_planta+dwg | h1 */
+  fonte: string;
+  e?: number | null;
+  n?: number | null;
+  offset_m?: number | null;
+  obs?: string;
+}
+
+export interface MtpTravessiaDrenagem {
+  id: string;
+  /** BSTC | BSCC | BDTC | BDCC | BTTC | OAE | "" (só DXF) */
+  tipo: string;
+  n_linhas: number;
+  dimensoes: MtpDimensoesDispositivo;
+  comprimento_m?: number | null;
+  esconsidade_graus?: number | null;
+  km?: string | null;
+  sta_m?: number | null;
+  eixo_id?: string | null;
+  status: MtpDrenagemStatus;
+  bacia_id?: string | null;
+  e?: number | null;
+  n?: number | null;
+  folha?: string;
+  fontes: string[];
+  obs?: string;
+}
+
+export interface MtpBaciaDrenagem {
+  id: string;
+  area_km2?: number | null;
+  area_ha?: number | null;
+}
+
+export interface MtpDrenagemResumo {
+  n_dispositivos: number;
+  n_travessias: number;
+  n_bacias: number;
+  extensao_total_m: number;
+  por_familia: { familia: string; unidade: string; n: number; extensao_m: number }[];
+  por_eixo: { eixo_id: string; n_dispositivos: number; extensao_m: number }[];
+  travessias_por_tipo: Record<string, number>;
+  por_status: Record<string, number>;
+  cobertura: {
+    n_folhas_pdf: number;
+    folhas: string[];
+    folhas_ausentes: string[];
+    sentidos: Record<string, string>;
+    fontes: Record<string, number>;
+  };
+}
+
+export interface MtpDrenagem {
+  versao: number;
+  dispositivos: MtpDispositivoDrenagem[];
+  travessias: MtpTravessiaDrenagem[];
+  bacias: MtpBaciaDrenagem[];
+  resumo: MtpDrenagemResumo;
+  /** código → família aplicada (auditoria do mapping) */
+  familias: Record<string, string>;
+  params: Record<string, unknown>;
+  fontes: string[];
+  warnings: string[];
+}
+
+/** Bloco `drenagem` tipado (null quando ausente/formato desconhecido). */
+export function drenagemDe(pacote: MtpPacote | null): MtpDrenagem | null {
+  const d = pacote?.drenagem as MtpDrenagem | null | undefined;
+  if (!d || !Array.isArray(d.dispositivos) || !d.resumo) return null;
+  return d;
+}
+
 export interface MtpPacote {
   schema: typeof MTP_SCHEMA;
   schema_version: number;
@@ -354,6 +459,8 @@ export interface MtpPacote {
   geometria?: MtpGeometria | null;
   /** Bloco opcional: horizontes geológicos do DWG de perfil */
   perfil_geologico?: unknown | null;
+  /** Bloco opcional: dispositivos de drenagem das pranchas H1/H2 */
+  drenagem?: unknown | null;
   provenance: Record<string, Provenance>;
   warnings: string[];
 }
