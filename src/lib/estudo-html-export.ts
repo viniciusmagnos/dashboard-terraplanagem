@@ -31,8 +31,10 @@ import {
 } from "./estudo-html-charts";
 import { fmt, fmtBRL, fmtKm } from "./format";
 import {
+  drenagemDe,
   geotecniaDe,
   staToKmLabel,
+  type MtpDrenagem,
   type MtpGeometria,
   type MtpGeotecnia,
   type MtpPacote,
@@ -184,6 +186,10 @@ export function montarDadosCompletos(
       n_sondagens: geo?.resumo?.n_total ?? 0,
       tem_geometria: !!p.geometria,
       tem_geotecnia: !!geo,
+      tem_drenagem: !!drenagemDe(p),
+      n_dispositivos_drenagem: drenagemDe(p)?.resumo.n_dispositivos ?? 0,
+      n_travessias_drenagem: drenagemDe(p)?.resumo.n_travessias ?? 0,
+      extensao_drenagem_m: drenagemDe(p)?.resumo.extensao_total_m ?? null,
       custos_referencia: CUSTOS_REFERENCIA,
       custos_editados: input.entradas.custosEditados,
       entradas_pendentes: entradasPendentes(input.entradas),
@@ -563,6 +569,177 @@ function tabGeotecnia(
   ].join("");
 }
 
+const DRE_FAMILIA_ROTULO: Record<string, string> = {
+  sarjeta: "Sarjetas",
+  valeta: "Valetas",
+  dreno: "Drenos",
+  descida: "Descidas d'água",
+  dissipador: "Dissipadores",
+  bueiro: "Bueiros (greide)",
+  boca_caixa: "Bocas e caixas",
+  meio_fio: "Meio-fio",
+  outros: "Outros",
+};
+
+const DRE_STATUS_ROTULO: Record<string, string> = {
+  projetado: "Projetado",
+  existente: "Existente",
+  prolongamento: "Prolongamento",
+  asu: "A utilizar (A.S.U)",
+  asd: "A demolir (A.S.D)",
+};
+
+function tabDrenagem(
+  input: DadosEstudoInput,
+  dre: MtpDrenagem,
+  incGeo: boolean,
+): string {
+  const r = dre.resumo;
+  const cob = r.cobertura;
+
+  const statusResumo = Object.entries(r.por_status)
+    .map(([s, n]) => `${fmt(n)} ${DRE_STATUS_ROTULO[s] ?? s}`)
+    .join(" · ");
+  const kpis = [
+    kpiCard("Dispositivos", fmt(r.n_dispositivos), statusResumo),
+    kpiCard("Extensão linear", `${fmt(r.extensao_total_m / 1000, 1)} km`),
+    kpiCard(
+      "Travessias / bueiros",
+      fmt(r.n_travessias),
+      Object.entries(r.travessias_por_tipo)
+        .map(([t, n]) => `${fmt(n)} ${t || "s/ tipo"}`)
+        .join(" · "),
+    ),
+    kpiCard("Bacias de contribuição", fmt(r.n_bacias), "estudo hidrológico (H1)"),
+  ].join("");
+
+  let coberturaBloco = "";
+  if (cob.folhas_ausentes.length > 0 || cob.sentidos.serie) {
+    const partes = Object.entries(cob.sentidos)
+      .map(([s, txt]) => (s === "serie" ? txt : `${s}: ${txt}`))
+      .join(" · ");
+    coberturaBloco = `<p class="ref">⚠ Cobertura parcial das pranchas — ${esc(partes)}${
+      cob.folhas_ausentes.length
+        ? ` · folhas ausentes: ${esc(cob.folhas_ausentes.slice(0, 12).join(", "))}${
+            cob.folhas_ausentes.length > 12 ? "…" : ""
+          }`
+        : ""
+    }</p>`;
+  }
+
+  const famBloco = card(
+    "Por família",
+    tabela(
+      [{ t: "Família" }, { t: "Qtde", r: true }, { t: "Extensão (m)", r: true }],
+      r.por_familia.map((f) => [
+        esc(DRE_FAMILIA_ROTULO[f.familia] ?? f.familia),
+        fmt(f.n),
+        f.extensao_m ? fmt(f.extensao_m) : "—",
+      ]),
+      ["TOTAL", fmt(r.n_dispositivos), fmt(r.extensao_total_m)],
+    ),
+  );
+
+  const eixoBloco = card(
+    "Por eixo",
+    tabela(
+      [{ t: "Eixo" }, { t: "Dispositivos", r: true }, { t: "Extensão (m)", r: true }],
+      r.por_eixo.map((e) => [
+        esc(nomeEixo(input.pacote, e.eixo_id)),
+        fmt(e.n_dispositivos),
+        fmt(e.extensao_m),
+      ]),
+    ),
+  );
+
+  // Planta com travessias/dispositivos (quando há geometria + E/N).
+  let plantaBloco = "";
+  const geom: MtpGeometria | null | undefined = incGeo ? input.pacote.geometria : null;
+  if (geom && geom.eixos?.length) {
+    const [wx, wy] = geom.world_offset ?? [0, 0];
+    const pontos: PlantaPonto[] = [];
+    for (const t of dre.travessias) {
+      if (t.e == null || t.n == null) continue;
+      pontos.push({
+        e: t.e - wx,
+        n: t.n - wy,
+        rotulo: `${t.tipo || "bueiro"}${t.km ? ` · km ${t.km}` : ""}`,
+      });
+    }
+    if (pontos.length)
+      plantaBloco = card(
+        "Travessias na planta",
+        plantaEixosSvg(geom, input.pacote.eixos ?? [], pontos),
+      );
+  }
+
+  const LIM_TRV = 80;
+  const trvBloco = card(
+    "Travessias e bueiros",
+    tabela(
+      [
+        { t: "Tipo" },
+        { t: "Seção" },
+        { t: "km / estaca" },
+        { t: "Compr. (m)", r: true },
+        { t: "Status" },
+        { t: "Fontes" },
+      ],
+      dre.travessias.slice(0, LIM_TRV).map((t) => [
+        esc(t.tipo || "—") + (t.n_linhas > 1 ? ` ×${t.n_linhas}` : ""),
+        esc(t.dimensoes?.secao ?? "—"),
+        esc(t.km ?? (t.sta_m != null ? staToKmLabel(t.sta_m) : "—")),
+        fmt(t.comprimento_m ?? null, 1),
+        esc(DRE_STATUS_ROTULO[t.status] ?? t.status),
+        esc(t.fontes.join(" + ")),
+      ]),
+    ) +
+      (dre.travessias.length > LIM_TRV
+        ? `<p class="ref">Mostrando ${LIM_TRV} de ${dre.travessias.length} travessias — as demais estão no bloco JSON.</p>`
+        : ""),
+  );
+
+  const LIM_DISP = 120;
+  const dispBloco = card(
+    "Dispositivos",
+    tabela(
+      [
+        { t: "Código" },
+        { t: "Família" },
+        { t: "Eixo" },
+        { t: "Estaca", r: true },
+        { t: "Extensão (m)", r: true },
+        { t: "Lado" },
+        { t: "Status" },
+        { t: "Folha" },
+      ],
+      dre.dispositivos.slice(0, LIM_DISP).map((d) => [
+        esc(d.tipo_codigo),
+        esc(DRE_FAMILIA_ROTULO[d.familia] ?? d.familia),
+        esc(d.eixo_id ?? "—"),
+        d.sta_ini_m == null ? "—" : esc(staToKmLabel(d.sta_ini_m)),
+        d.unidade === "un" ? `${fmt(d.quantidade)} un` : fmt(d.extensao_m ?? null, 1),
+        esc(d.lado ?? "—"),
+        esc(DRE_STATUS_ROTULO[d.status] ?? d.status),
+        esc(d.folha || "—"),
+      ]),
+    ) +
+      (dre.dispositivos.length > LIM_DISP
+        ? `<p class="ref">Mostrando ${LIM_DISP} de ${dre.dispositivos.length} dispositivos — a lista completa está no bloco JSON (campo <code>pacote.drenagem.dispositivos</code>) e no export XLSX "Drenagem".</p>`
+        : ""),
+  );
+
+  return [
+    coberturaBloco,
+    `<div class="kpi-grid small">${kpis}</div>`,
+    famBloco,
+    eixoBloco,
+    plantaBloco,
+    trvBloco,
+    dispBloco,
+  ].join("");
+}
+
 function tabCenarios(input: DadosEstudoInput): string {
   const linhas = linhasCenarios(input);
   const premCols: Col[] = [
@@ -927,6 +1104,7 @@ export function gerarHtmlDashboard(
   const dados = montarDadosCompletos(input, opts);
   const incGeo = opts.incluirGeometria && !!p.geometria;
   const geo = geotecniaDe(p);
+  const dre = drenagemDe(p);
   const secoes = incGeo
     ? tabSecoes(input)
     : {
@@ -963,6 +1141,15 @@ export function gerarHtmlDashboard(
             id: "geotecnia",
             rotulo: `Geotecnia (${geo.resumo.n_total})`,
             corpo: tabGeotecnia(input, geo, incGeo),
+          },
+        ]
+      : []),
+    ...(dre
+      ? [
+          {
+            id: "drenagem",
+            rotulo: `Drenagem (${dre.resumo.n_dispositivos})`,
+            corpo: tabDrenagem(input, dre, incGeo),
           },
         ]
       : []),

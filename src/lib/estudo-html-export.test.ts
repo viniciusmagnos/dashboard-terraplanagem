@@ -214,4 +214,89 @@ describe("gerarHtmlDashboard", () => {
     expect(nomeArquivo(p, "html")).toBe("EPR-BR-365-581.html");
     expect(nomeArquivo(p, "json", "-dados")).toBe("EPR-BR-365-581-dados.json");
   });
+
+  it("inclui a aba Drenagem quando o pacote tem o bloco (e omite quando não)", () => {
+    // sem bloco → sem aba
+    const htmlSem = gerarHtmlDashboard(montarInput(), { incluirGeometria: false });
+    expect(htmlSem).not.toContain('data-tab="drenagem"');
+
+    const pacoteDre = {
+      ...pacote,
+      drenagem: {
+        versao: 1,
+        dispositivos: [
+          {
+            id: "DR-2S-0001",
+            familia: "sarjeta",
+            tipo_codigo: "DR-2S",
+            eixo_id: pacote.eixos[0]?.id,
+            lado: "D",
+            sta_ini_m: 582000,
+            sta_fim_m: 582120,
+            extensao_m: 120,
+            quantidade: 1,
+            unidade: "m",
+            status: "projetado",
+            folha: "H2-002",
+            fonte: "pdf_planta",
+          },
+        ],
+        travessias: [
+          {
+            id: "TRV-1",
+            tipo: "BSTC",
+            n_linhas: 1,
+            dimensoes: { secao: "Ø 0,80" },
+            comprimento_m: 18,
+            km: "582+100,00",
+            sta_m: 582100,
+            status: "existente",
+            fontes: ["h1"],
+          },
+        ],
+        bacias: [{ id: "1D", area_km2: 4.465, area_ha: 446.5 }],
+        resumo: {
+          n_dispositivos: 1,
+          n_travessias: 1,
+          n_bacias: 1,
+          extensao_total_m: 120,
+          por_familia: [
+            { familia: "sarjeta", unidade: "m", n: 1, extensao_m: 120 },
+          ],
+          por_eixo: [
+            { eixo_id: pacote.eixos[0]?.id ?? "E1", n_dispositivos: 1, extensao_m: 120 },
+          ],
+          travessias_por_tipo: { BSTC: 1 },
+          por_status: { projetado: 1, existente: 1 },
+          cobertura: {
+            n_folhas_pdf: 1,
+            folhas: ["H2-002"],
+            folhas_ausentes: ["H2-003 (crescente)"],
+            sentidos: { crescente: "folhas 002–002 (1)" },
+            fontes: { pdf_planta: 1 },
+          },
+        },
+        familias: { "DR-2S": "sarjeta" },
+        params: {},
+        fontes: [],
+        warnings: [],
+      },
+    } as MtpPacote;
+
+    const html = gerarHtmlDashboard(montarInput({ pacote: pacoteDre }), {
+      incluirGeometria: false,
+    });
+    expect(html).toContain('data-tab="drenagem"');
+    expect(html).toContain("Drenagem (1)");
+    expect(html).toContain("DR-2S");
+    expect(html).toContain("Cobertura parcial das pranchas");
+    expect(html).toContain("Travessias e bueiros");
+
+    // o resumo do JSON embutido ganha os KPIs de drenagem e o pacote leva o bloco
+    const parsed = JSON.parse(extrairJson(html));
+    expect(parsed.resumo.tem_drenagem).toBe(true);
+    expect(parsed.resumo.n_dispositivos_drenagem).toBe(1);
+    expect(parsed.resumo.extensao_drenagem_m).toBe(120);
+    expect(parsed.pacote.drenagem.dispositivos).toHaveLength(1);
+  });
 });
