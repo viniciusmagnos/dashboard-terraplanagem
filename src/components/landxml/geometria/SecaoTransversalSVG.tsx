@@ -8,6 +8,7 @@ import { useMemo } from "react";
 import { fmt } from "../../../lib/format";
 import { interpLinha, secaoBounds } from "../../../lib/mtp-geometry";
 import type { MtpGeoSecao, MtpSondagem } from "../../../lib/mtp";
+import type { BandaMaterialCorte } from "../../../lib/perfil-materiais";
 
 const COR_TERRENO = "#10b981";
 const COR_PLATAFORMA = "#ef4444";
@@ -38,6 +39,8 @@ export function SecaoTransversalSVG({
   exagero = 1,
   alargamentoPct = 0,
   furo = null,
+  bandasMaterial = null,
+  naCotaRel = null,
   largura = 860,
   altura = 340,
 }: {
@@ -49,6 +52,10 @@ export function SecaoTransversalSVG({
   alargamentoPct?: number;
   /** Sondagem próxima — coluna de camadas por categoria + NA no offset do furo. */
   furo?: FuroSecao | null;
+  /** Faixas de material no corte (furo do perfil) — colorem o corte por categoria. */
+  bandasMaterial?: BandaMaterialCorte[] | null;
+  /** Cota do NA (lençol) já em z−z_offset; linha horizontal quando passa pela seção. */
+  naCotaRel?: number | null;
   largura?: number;
   altura?: number;
 }) {
@@ -240,6 +247,8 @@ export function SecaoTransversalSVG({
       cx: X(0),
       yTop: Y(b.zMax),
       yBot: Y(b.zMin),
+      offMin: b.offMin,
+      offMax: b.offMax,
       X,
       Y,
       zTicks,
@@ -296,6 +305,11 @@ export function SecaoTransversalSVG({
     );
   }
 
+  const temBandas = !!bandasMaterial && bandasMaterial.length > 0;
+  // NA só é desenhado quando a cota do lençol cai DENTRO da faixa da seção
+  const naY = naCotaRel != null ? geom.Y(naCotaRel) : null;
+  const mostrarNA = naY != null && naY >= geom.yTop - 0.5 && naY <= geom.yBot + 0.5;
+
   return (
     <svg
       viewBox={`0 0 ${largura} ${altura}`}
@@ -316,15 +330,40 @@ export function SecaoTransversalSVG({
           <path d="M0,1 L9,5 L0,9" fill="none" stroke={COR_COTA} strokeWidth={1.4} />
         </marker>
       </defs>
-      {/* hachuras corte/aterro */}
-      {geom.quads.map((q, i) => (
-        <polygon
-          key={i}
-          points={q.pts}
-          fill={q.corte ? COR_CORTE : COR_ATERRO}
-          fillOpacity={0.35}
-        />
-      ))}
+      {/* hachuras corte/aterro (o corte vira faixas de material quando há furo) */}
+      {geom.quads.map((q, i) =>
+        q.corte && temBandas ? null : (
+          <polygon
+            key={i}
+            points={q.pts}
+            fill={q.corte ? COR_CORTE : COR_ATERRO}
+            fillOpacity={0.35}
+          />
+        ),
+      )}
+      {/* faixas de material no corte (furo do perfil), coloridas por categoria */}
+      {temBandas &&
+        bandasMaterial!.map((band, bi) =>
+          band.rings.map((ring, ri) => (
+            <polygon
+              key={`bm-${bi}-${ri}`}
+              points={ring
+                .map(([o, z]) => `${geom.X(o).toFixed(1)},${geom.Y(z).toFixed(1)}`)
+                .join(" ")}
+              fill={band.categoria ? COR_CAT[band.categoria] : "#64748b"}
+              fillOpacity={band.extrapolado ? 0.22 : 0.5}
+              stroke={band.categoria ? COR_CAT[band.categoria] : "#64748b"}
+              strokeOpacity={0.4}
+              strokeWidth={0.5}
+            >
+              <title>
+                {band.material}
+                {band.categoria ? ` · ${band.categoria}ª cat` : ""}
+                {band.extrapolado ? " · extrapolado (abaixo do furo)" : ""}
+              </title>
+            </polygon>
+          )),
+        )}
       {/* overlay alargamento */}
       {geom.alarg.map((a, i) => (
         <g key={`al-${i}`}>
@@ -426,6 +465,34 @@ export function SecaoTransversalSVG({
           {o > 0 ? `+${o}` : o}
         </text>
       ))}
+      {/* nível d'água (lençol) — linha horizontal quando passa pela seção */}
+      {mostrarNA && (
+        <g>
+          <line
+            x1={geom.X(geom.offMin)}
+            y1={naY!}
+            x2={geom.X(geom.offMax)}
+            y2={naY!}
+            stroke="#38bdf8"
+            strokeWidth={1.4}
+            strokeDasharray="6 3"
+            strokeOpacity={0.9}
+          />
+          <text
+            x={geom.X(geom.offMax) - 4}
+            y={naY! - 3}
+            textAnchor="end"
+            fontSize={10}
+            fill="#38bdf8"
+            paintOrder="stroke"
+            stroke="#0f172a"
+            strokeWidth={3}
+            strokeLinejoin="round"
+          >
+            NA {fmt(naCotaRel! + zOffset, 1)}
+          </text>
+        </g>
+      )}
       {/* furo de sondagem próximo (camadas por categoria) */}
       {furoDraw && (
         <g>
@@ -471,14 +538,23 @@ export function SecaoTransversalSVG({
       {geom.greidePath && (
         <text x={122} y={16} fill={COR_GREIDE} fontSize={11}>greide</text>
       )}
-      <text x={176} y={16} fill={COR_CORTE} fontSize={11}>corte</text>
-      <text x={216} y={16} fill={COR_ATERRO} fontSize={11}>aterro</text>
+      {temBandas ? (
+        <text x={176} y={16} fill="#94a3b8" fontSize={11}>corte por material ↓</text>
+      ) : (
+        <text x={176} y={16} fill={COR_CORTE} fontSize={11}>corte</text>
+      )}
+      <text x={temBandas ? 268 : 216} y={16} fill={COR_ATERRO} fontSize={11}>aterro</text>
       {geom.cftPath && (
         <text x={262} y={16} fill={COR_CFT} fontSize={11}>CFT</text>
       )}
       {geom.dOff > 0 && (
         <text x={300} y={16} fill={COR_ALARG} fontSize={11}>
           alargamento +{fmt(geom.dOff, 1)} m/lado
+        </text>
+      )}
+      {mostrarNA && (
+        <text x={geom.dOff > 0 ? 440 : 300} y={16} fill="#38bdf8" fontSize={11}>
+          NA
         </text>
       )}
       <text x={largura - 10} y={16} textAnchor="end" fill="#94a3b8" fontSize={11}>

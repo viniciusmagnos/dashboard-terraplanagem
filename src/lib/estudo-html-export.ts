@@ -24,7 +24,6 @@ import {
   brucknerChartSvg,
   diagramaLinearSvg,
   orcamentoBarsSvg,
-  perfilGeologicoSvg,
   perfilLongitudinalSvg,
   plantaEixosSvg,
   secaoTransversalSvg,
@@ -34,10 +33,8 @@ import { fmt, fmtBRL, fmtKm } from "./format";
 import {
   drenagemDe,
   geotecniaDe,
-  perfilGeologicoDe,
   staToKmLabel,
   type MtpDrenagem,
-  type MtpEnsaioLab,
   type MtpGeometria,
   type MtpGeotecnia,
   type MtpPacote,
@@ -62,46 +59,9 @@ export interface DadosEstudoInput {
   geradoEm: string;
 }
 
-/** IDs das abas do relatório — unidade de seleção da exportação por aba. */
-export type AbaExport =
-  | "visao"
-  | "bruckner"
-  | "planta"
-  | "secoes"
-  | "geotecnia"
-  | "drenagem"
-  | "cenarios"
-  | "orcamento"
-  | "comparativo"
-  | "dados";
-
-/** Catálogo das abas exportáveis (rótulo + bloco do pacote que a habilita). */
-export const ABAS_EXPORT: {
-  id: AbaExport;
-  rotulo: string;
-  /** Só fica disponível quando o pacote tem este bloco opcional. */
-  requer?: "geotecnia" | "drenagem";
-}[] = [
-  { id: "visao", rotulo: "Visão geral" },
-  { id: "bruckner", rotulo: "Brückner e DMT" },
-  { id: "planta", rotulo: "Planta linear" },
-  { id: "secoes", rotulo: "Seções (traçado/perfil)" },
-  { id: "geotecnia", rotulo: "Geotecnia (sondagens)", requer: "geotecnia" },
-  { id: "drenagem", rotulo: "Drenagem", requer: "drenagem" },
-  { id: "cenarios", rotulo: "Cenários e premissas" },
-  { id: "orcamento", rotulo: "Orçamento e DME" },
-  { id: "comparativo", rotulo: "Comparativo" },
-  { id: "dados", rotulo: "Dados para IA (JSON)" },
-];
-
 export interface OpcoesExport {
   /** Embute o bloco de geometria (traçado/perfil/seções) — arquivos maiores. */
   incluirGeometria: boolean;
-  /**
-   * Recorte de abas a exportar (relatório HTML + JSON embutido/baixado).
-   * Quando `undefined` ou vazio, exporta TODAS as abas (comportamento padrão).
-   */
-  abas?: AbaExport[];
 }
 
 /** Máx. de seções transversais pré-renderizadas no seletor (as demais ficam no JSON). */
@@ -172,57 +132,24 @@ function entradasPendentes(e: EntradasProjeto): string[] {
 
 /* ── Objeto de DADOS COMPLETOS (o que vai embutido/baixado) ── */
 
-/** Remove blocos opcionais pesados do pacote conforme o recorte de abas. */
-function filtrarPacote(
-  pacote: MtpPacote,
-  manter: { geometria: boolean; geotecnia: boolean; drenagem: boolean },
-): MtpPacote {
-  if (manter.geometria && manter.geotecnia && manter.drenagem) return pacote;
-  const out = { ...pacote } as Record<string, unknown>;
-  if (!manter.geometria) delete out.geometria;
-  if (!manter.geotecnia) {
-    delete out.sondagens;
-    delete out.perfil_geologico;
-  }
-  if (!manter.drenagem) delete out.drenagem;
-  return out as unknown as MtpPacote;
+function stripGeometria(pacote: MtpPacote): MtpPacote {
+  const { geometria: _drop, ...rest } = pacote;
+  return rest as MtpPacote;
 }
-
-/** Abas cujos dados dependem do estado de cenários (entradas + orçamentos). */
-const ABAS_DE_CENARIO: AbaExport[] = [
-  "visao",
-  "bruckner",
-  "planta",
-  "cenarios",
-  "orcamento",
-  "comparativo",
-  "dados",
-];
 
 export function montarDadosCompletos(
   input: DadosEstudoInput,
   opts: OpcoesExport,
 ): Record<string, unknown> {
   const p = input.pacote;
-  const sel = opts.abas && opts.abas.length ? new Set<AbaExport>(opts.abas) : null;
-  const quer = (id: AbaExport) => !sel || sel.has(id);
-
-  // Geometria embutida só quando pedida E alguma aba que a consome está no recorte.
-  const usaGeometria = quer("secoes") || quer("geotecnia") || quer("drenagem");
-  const incGeo = opts.incluirGeometria && !!p.geometria && usaGeometria;
-  const pacoteExport = filtrarPacote(p, {
-    geometria: incGeo,
-    geotecnia: quer("geotecnia"),
-    drenagem: quer("drenagem"),
-  });
-  const incluiCenarios = ABAS_DE_CENARIO.some(quer);
-
+  const incGeo = opts.incluirGeometria && !!p.geometria;
+  const pacoteExport = incGeo ? p : stripGeometria(p);
   const geo = geotecniaDe(p);
   const br = p.bruckner?.totals ?? null;
   const vb = p.volumes_base;
   const linhas = linhasCenarios(input);
 
-  const dados: Record<string, unknown> = {
+  return {
     meta: {
       gerado_em: input.geradoEm,
       ferramenta: "Manta Hub — Dashboard de Terraplenagem",
@@ -237,7 +164,6 @@ export function montarDadosCompletos(
       estudo_role: input.estudoRole,
       cenario_ativo_id: input.cenarioAtivoId,
       inclui_geometria: incGeo,
-      abas_exportadas: sel ? Array.from(sel) : "todas",
       projeto: p.projeto,
       fontes: (p.generator?.source_files ?? []).map((s) => s.filename),
     },
@@ -258,8 +184,6 @@ export function montarDadosCompletos(
       n_eixos: p.eixos?.length ?? 0,
       n_cenarios: input.cenarios.length,
       n_sondagens: geo?.resumo?.n_total ?? 0,
-      n_furos_com_ensaio: geo?.resumo?.n_com_ensaios ?? 0,
-      n_amostras_lab: geo?.resumo?.n_amostras_lab ?? 0,
       tem_geometria: !!p.geometria,
       tem_geotecnia: !!geo,
       tem_drenagem: !!drenagemDe(p),
@@ -272,17 +196,14 @@ export function montarDadosCompletos(
       provenance: p.provenance ?? {},
       warnings: p.warnings ?? [],
     },
-  };
-
-  if (incluiCenarios) {
     // Estado do estudo — mesmo shape do localStorage / store server-side.
-    dados.estado = {
+    estado: {
       v: 2,
       entradas: input.entradas,
       cenarios: input.cenarios,
       cenarioAtivoId: input.cenarioAtivoId,
-    };
-    dados.cenarios_computados = linhas.map((l) => {
+    },
+    cenarios_computados: linhas.map((l) => {
       let bruckner: unknown = null;
       if (l.comp.bruckner) {
         // A curva (array grande) fica só no `pacote.bruckner`; aqui mantemos
@@ -305,12 +226,10 @@ export function montarDadosCompletos(
         orcamento: l.comp.orcamento,
         economia: l.economia,
       };
-    });
-  }
-
-  // Pacote .mtp.json (blocos opcionais recortados conforme as abas/opção).
-  dados.pacote = pacoteExport;
-  return dados;
+    }),
+    // Pacote .mtp.json completo (com/sem geometria conforme a opção).
+    pacote: pacoteExport,
+  };
 }
 
 /* ── Helpers de HTML ──────────────────────────────────────── */
@@ -567,25 +486,13 @@ function tabGeotecnia(
   incGeo: boolean,
 ): string {
   const r = geo.resumo;
-  const porTipo = Object.entries(r.por_tipo ?? {})
-    .map(([t, n]) => `${fmt(n)} ${t}`)
-    .join(" · ");
   const kpis = [
-    kpiCard("Sondagens", fmt(r.n_total), porTipo || undefined),
-    kpiCard("No corredor", fmt(r.n_posicionadas), `${fmt(r.n_com_coordenada)} com coordenada UTM`),
+    kpiCard("Sondagens", fmt(r.n_total)),
+    kpiCard("Posicionadas", fmt(r.n_posicionadas)),
     kpiCard("Prof. média", r.prof_media_m == null ? "—" : `${fmt(r.prof_media_m, 1)} m`),
     kpiCard("NA médio", r.na_medio_m == null ? "—" : `${fmt(r.na_medio_m, 1)} m`),
-    kpiCard("Com solo mole", fmt(r.n_com_solo_mole), "SPT ≤ 4 no topo"),
-    kpiCard("Com impenetrável", fmt(r.n_com_impenetravel), "N ≥ 50 (indício 2ª/3ª cat.)"),
-    ...((r.n_com_ensaios ?? 0) > 0
-      ? [
-          kpiCard(
-            "Com ensaio lab",
-            fmt(r.n_com_ensaios ?? 0),
-            `${fmt(r.n_amostras_lab ?? 0)} amostras (CBR, umidade, MCT…)`,
-          ),
-        ]
-      : []),
+    kpiCard("Com solo mole", fmt(r.n_com_solo_mole)),
+    kpiCard("Com impenetrável", fmt(r.n_com_impenetravel)),
   ].join("");
 
   // Planta com furos (quando há geometria + coordenadas).
@@ -623,100 +530,6 @@ function tabGeotecnia(
     );
   }
 
-  // Material escavado por eixo (furo × profundidade de corte, bin a bin).
-  let matBloco = "";
-  if (geo.materiais && geo.materiais.por_eixo.length > 0) {
-    const mm = geo.materiais;
-    const matCols: Col[] = [
-      { t: "Eixo" },
-      { t: "Furos", r: true },
-      { t: "Corte (m³)", r: true },
-      { t: "Coberto", r: true },
-      { t: "1ª cat (m³)", r: true },
-      { t: "2ª cat (m³)", r: true },
-      { t: "3ª cat (m³)", r: true },
-      { t: "Aterro s/ solo mole", r: true },
-    ];
-    const matLinhas = mm.por_eixo.map((m) => [
-      esc(nomeEixo(input.pacote, m.eixo_id)),
-      fmt(m.n_furos),
-      fmt(m.v_corte_total),
-      m.v_corte_total > 0
-        ? `${fmt((m.v_corte_coberto / m.v_corte_total) * 100, 0)}%`
-        : "—",
-      `<span class="em">${fmt(m.corte_1cat)}</span>`,
-      `<span class="am">${fmt(m.corte_2cat)}</span>`,
-      `<span class="ro">${fmt(m.corte_3cat)}</span>`,
-      m.aterro_solo_mole_m > 0
-        ? `<span class="am">${fmt(m.aterro_solo_mole_m / 1000, 2)} km · ${fmt(m.v_solo_mole)} m³</span>`
-        : "—",
-    ]);
-    const matFoot = [
-      "Total (coberto)",
-      "",
-      "",
-      `${fmt(mm.cobertura_corte * 100, 0)}%`,
-      fmt(mm.corte_1cat),
-      fmt(mm.corte_2cat),
-      fmt(mm.corte_3cat),
-      mm.v_solo_mole > 0
-        ? `${fmt(mm.aterro_solo_mole_km, 2)} km · ${fmt(mm.v_solo_mole)} m³`
-        : "—",
-    ];
-    matBloco = card(
-      "Material escavado por eixo",
-      tabela(matCols, matLinhas, matFoot),
-      `Furo mais próximo × profundidade de corte (bin a bin). ${fmt(mm.cobertura_corte * 100, 0)}% do volume de corte tem furo a ≤ ${fmt(mm.max_dist_m, 0)} m e usa as camadas reais; o restante usa o % global de categorias.`,
-    );
-  }
-
-  // Perfil geológico — horizontes oficiais do DWG (RAM = 2ª cat, RAD/RS = 3ª cat).
-  let perfilBloco = "";
-  const pg = perfilGeologicoDe(input.pacote);
-  if (pg) {
-    const strips = pg.eixos
-      .map(
-        (e) =>
-          `<div class="strip"><div class="strip-t">${esc(e.titulo || nomeEixo(input.pacote, e.eixo_id))} <span class="mut">(${esc(staToKmLabel(e.sta_min_m))} → ${esc(staToKmLabel(e.sta_max_m))})</span></div>${perfilGeologicoSvg(e)}</div>`,
-      )
-      .join("");
-
-    // Comparação corte por categoria: horizonte (DWG) × furo (materiais).
-    const furoPorEixo = new Map<string, { c2: number; c3: number }>();
-    for (const m of geo.materiais?.por_eixo ?? [])
-      furoPorEixo.set(m.eixo_id, { c2: m.corte_2cat, c3: m.corte_3cat });
-    const cmpCols: Col[] = [
-      { t: "Eixo" },
-      { t: "Corte coberto", r: true },
-      { t: "1ª cat (horiz.)", r: true },
-      { t: "2ª cat (horiz.)", r: true },
-      { t: "3ª cat (horiz.)", r: true },
-      { t: "2ª/3ª por furo", r: true },
-    ];
-    const cmpLinhas = (pg.categorias_por_eixo ?? []).map((c) => {
-      const f = furoPorEixo.get(c.eixo_id);
-      return [
-        esc(nomeEixo(input.pacote, c.eixo_id)),
-        c.v_corte_total > 0
-          ? `${fmt((c.v_corte_coberto / c.v_corte_total) * 100, 0)}%`
-          : "—",
-        `<span class="em">${fmt(c.corte_1cat)}</span>`,
-        `<span class="am">${fmt(c.corte_2cat)}</span>`,
-        `<span class="ro">${fmt(c.corte_3cat)}</span>`,
-        f ? `${fmt(f.c2)} / ${fmt(f.c3)}` : "—",
-      ];
-    });
-    const cmp = cmpLinhas.length ? tabela(cmpCols, cmpLinhas) : "";
-    const warns = (pg.warnings ?? []).length
-      ? `<p class="ref">${(pg.warnings ?? []).map((w) => esc(w)).join(" · ")}</p>`
-      : "";
-    perfilBloco = card(
-      "Perfil geológico — horizontes oficiais do projeto",
-      strips + cmp + warns,
-      "Topo de rocha interpretado pelo geólogo no DWG de perfil (RAM = 2ª cat, RAD/RS = 3ª cat). Onde há painel, o corte por categoria usa estes horizontes em vez de extrapolar o furo mais próximo.",
-    );
-  }
-
   const LIM = 120;
   const furos = geo.sondagens.slice(0, LIM);
   const furoCols: Col[] = [
@@ -725,108 +538,34 @@ function tabGeotecnia(
     { t: "Eixo" },
     { t: "Estaca", r: true },
     { t: "Offset (m)", r: true },
-    { t: "Cota (m)", r: true },
     { t: "Prof. (m)", r: true },
     { t: "NA (m)", r: true },
     { t: "Solo mole (m)", r: true },
     { t: "Impen. (m)", r: true },
     { t: "Camadas", r: true },
-    { t: "Ensaios", r: true },
   ];
-  const furoLinhas = furos.map((f) => {
-    const nE = f.ensaios?.length ?? 0;
-    const cota =
-      f.cota_m == null
-        ? "—"
-        : `${fmt(f.cota_m, 2)}${f.cota_fonte === "rt_locada" ? ' <span class="tag">loc</span>' : ""}`;
-    return [
-      esc(f.id),
-      esc(f.tipo),
-      esc(f.eixo_id ?? "—"),
-      f.sta_m == null ? "—" : esc(staToKmLabel(f.sta_m)),
-      fmt(f.offset_m ?? null, 1),
-      cota,
-      fmt(f.prof_total_m ?? null, 1),
-      f.na_seco ? "seco" : fmt(f.na_m ?? null, 1),
-      fmt(f.solo_mole_ate_m ?? null, 1),
-      fmt(f.impenetravel_m ?? null, 1),
-      fmt(f.camadas?.length ?? 0),
-      nE ? `<span class="cy">${nE}</span>` : "—",
-    ];
-  });
+  const furoLinhas = furos.map((f) => [
+    esc(f.id),
+    esc(f.tipo),
+    esc(f.eixo_id ?? "—"),
+    f.sta_m == null ? "—" : esc(staToKmLabel(f.sta_m)),
+    fmt(f.offset_m ?? null, 1),
+    fmt(f.prof_total_m ?? null, 1),
+    f.na_seco ? "seco" : fmt(f.na_m ?? null, 1),
+    fmt(f.solo_mole_ate_m ?? null, 1),
+    fmt(f.impenetravel_m ?? null, 1),
+    fmt(f.camadas?.length ?? 0),
+  ]);
   const nota =
     geo.sondagens.length > LIM
       ? `<p class="ref">Mostrando ${LIM} de ${geo.sondagens.length} furos — os demais estão no bloco JSON.</p>`
       : "";
 
-  // Ensaios de laboratório (CBR, Proctor, Atterberg, MCT/HRB/USCS) por amostra.
-  let ensBloco = "";
-  const furosComEnsaio = geo.sondagens.filter((f) => (f.ensaios?.length ?? 0) > 0);
-  if (furosComEnsaio.length > 0) {
-    const LIM_ENS = 150;
-    const atterberg = (e: MtpEnsaioLab): string =>
-      e.ll_pct == null && e.lp_pct == null && e.ip_pct == null
-        ? "—"
-        : `${e.ll_pct ?? "–"}/${e.lp_pct ?? "–"}/${e.ip_pct ?? "–"}`;
-    const ensCols: Col[] = [
-      { t: "Furo" },
-      { t: "Amostra (m)" },
-      { t: "Energia" },
-      { t: "w nat (%)", r: true },
-      { t: "w ót (%)", r: true },
-      { t: "γd (kN/m³)", r: true },
-      { t: "CBR (%)", r: true },
-      { t: "Exp. (%)", r: true },
-      { t: "LL/LP/IP", r: true },
-      { t: "HRB" },
-      { t: "USCS" },
-      { t: "MCT" },
-      { t: "Finos #200 (%)", r: true },
-    ];
-    const ensLinhas: string[][] = [];
-    let totalEns = 0;
-    for (const f of furosComEnsaio) {
-      for (const e of f.ensaios ?? []) {
-        totalEns++;
-        if (ensLinhas.length >= LIM_ENS) continue;
-        ensLinhas.push([
-          esc(f.id),
-          e.prof_de_m != null && e.prof_a_m != null
-            ? `${fmt(e.prof_de_m, 2)} – ${fmt(e.prof_a_m, 2)}`
-            : esc(e.ident || "—"),
-          esc(e.energia ?? "—"),
-          fmt(e.w_nat_pct, 1),
-          fmt(e.w_ot_pct, 1),
-          fmt(e.gamma_d_max_knm3, 2),
-          `<span class="em">${fmt(e.cbr_pct, 1)}</span>`,
-          fmt(e.expansao_pct, 1),
-          atterberg(e),
-          esc(e.hrb ?? "—"),
-          esc(e.uscs ?? "—"),
-          esc(e.mct ?? "—"),
-          fmt(e.granulometria?.["#200"] ?? null, 0),
-        ]);
-      }
-    }
-    const notaEns =
-      totalEns > ensLinhas.length
-        ? `<p class="ref">Mostrando ${ensLinhas.length} de ${totalEns} amostras — as demais estão no bloco JSON (campo <code>pacote.sondagens.sondagens[].ensaios</code>).</p>`
-        : "";
-    ensBloco = card(
-      "Ensaios de laboratório (caracterização de amostras)",
-      tabela(ensCols, ensLinhas) + notaEns,
-      "Umidade natural, Proctor (γd máx / w ótima), CBR, expansão, limites de Atterberg (LL/LP/IP), classificação (HRB, USCS, MCT) e % de finos (#200).",
-    );
-  }
-
   return [
     `<div class="kpi-grid small">${kpis}</div>`,
     plantaBloco,
     catBloco,
-    matBloco,
-    perfilBloco,
     card("Sondagens", tabela(furoCols, furoLinhas) + nota),
-    ensBloco,
   ].join("");
 }
 
@@ -1282,7 +1021,7 @@ tbody tr:hover{background:#1F2330}
 tr.grp td{background:#1F2330;color:#22d3ee;font-weight:600}
 tr.sub td{background:#181B23;font-weight:600;border-top:1px solid #2A2E37}
 tr.total td{background:#0891b2;color:#fff;font-weight:700}
-.cy{color:#22d3ee}.am{color:#fbbf24}.em{color:#34d399}.ro{color:#fb7185}
+.cy{color:#22d3ee}.am{color:#fbbf24}.em{color:#34d399}
 .tag{display:inline-block;font-size:10px;background:#2A2E37;color:#8B919A;border-radius:4px;padding:1px 5px;vertical-align:middle}
 .tag.on{background:rgba(6,182,212,.15);color:#67e8f9}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
@@ -1312,7 +1051,7 @@ const APP_JS = `
   }
   btns.forEach(function(b){b.addEventListener('click',function(){var id=b.getAttribute('data-tab'); if(show(id)){try{history.replaceState(null,'','#'+id);}catch(e){}}});});
   var initial=(location.hash||'').replace('#','');
-  if(!initial||!show(initial)){var f=tabs[0];if(f)show(f.id.replace(/^tab-/,''));}
+  if(!initial||!show(initial))show('visao');
 
   var pick=document.getElementById('sec-pick');
   var box=document.getElementById('sec-svg');
@@ -1366,18 +1105,15 @@ export function gerarHtmlDashboard(
   const incGeo = opts.incluirGeometria && !!p.geometria;
   const geo = geotecniaDe(p);
   const dre = drenagemDe(p);
-  const sel = opts.abas && opts.abas.length ? new Set<AbaExport>(opts.abas) : null;
-  const quer = (id: AbaExport) => !sel || sel.has(id);
-  const secoes =
-    incGeo && quer("secoes")
-      ? tabSecoes(input)
-      : {
-          html: card(
-            "Seções",
-            '<p class="empty">Traçado, perfil e seções omitidos nesta versão leve. Use "Relatório HTML (com dados)" para incluí-los.</p>',
-          ),
-          mapa: {} as Record<string, string>,
-        };
+  const secoes = incGeo
+    ? tabSecoes(input)
+    : {
+        html: card(
+          "Seções",
+          '<p class="empty">Traçado, perfil e seções omitidos nesta versão leve. Use "Relatório HTML (com dados)" para incluí-los.</p>',
+        ),
+        mapa: {} as Record<string, string>,
+      };
 
   const geradoLabel = (() => {
     try {
@@ -1394,36 +1130,34 @@ export function gerarHtmlDashboard(
   const jsonSeguro = jsonScriptSafe(JSON.stringify(dados));
   const secoesMapSeguro = jsonScriptSafe(JSON.stringify(secoes.mapa));
 
-  // `corpo` é preguiçoso: abas fora do recorte não renderizam seus SVGs/tabelas.
-  const todasAbas: { id: AbaExport; rotulo: string; corpo: () => string }[] = [
-    { id: "visao", rotulo: "Visão geral", corpo: () => tabVisao(input) },
-    { id: "bruckner", rotulo: "Brückner e DMT", corpo: () => tabBruckner(input) },
-    { id: "planta", rotulo: "Planta linear", corpo: () => tabPlanta(input) },
-    { id: "secoes", rotulo: "Seções", corpo: () => secoes.html },
+  const abas: { id: string; rotulo: string; corpo: string }[] = [
+    { id: "visao", rotulo: "Visão geral", corpo: tabVisao(input) },
+    { id: "bruckner", rotulo: "Brückner e DMT", corpo: tabBruckner(input) },
+    { id: "planta", rotulo: "Planta linear", corpo: tabPlanta(input) },
+    { id: "secoes", rotulo: "Seções", corpo: secoes.html },
     ...(geo
       ? [
           {
-            id: "geotecnia" as const,
+            id: "geotecnia",
             rotulo: `Geotecnia (${geo.resumo.n_total})`,
-            corpo: () => tabGeotecnia(input, geo, incGeo),
+            corpo: tabGeotecnia(input, geo, incGeo),
           },
         ]
       : []),
     ...(dre
       ? [
           {
-            id: "drenagem" as const,
+            id: "drenagem",
             rotulo: `Drenagem (${dre.resumo.n_dispositivos})`,
-            corpo: () => tabDrenagem(input, dre, incGeo),
+            corpo: tabDrenagem(input, dre, incGeo),
           },
         ]
       : []),
-    { id: "cenarios", rotulo: "Cenários e premissas", corpo: () => tabCenarios(input) },
-    { id: "orcamento", rotulo: "Orçamento e DME", corpo: () => tabOrcamento(input) },
-    { id: "comparativo", rotulo: "Comparativo", corpo: () => tabComparativo(input) },
-    { id: "dados", rotulo: "Dados (IA)", corpo: () => tabDados(input, incGeo) },
+    { id: "cenarios", rotulo: "Cenários e premissas", corpo: tabCenarios(input) },
+    { id: "orcamento", rotulo: "Orçamento e DME", corpo: tabOrcamento(input) },
+    { id: "comparativo", rotulo: "Comparativo", corpo: tabComparativo(input) },
+    { id: "dados", rotulo: "Dados (IA)", corpo: tabDados(input, incGeo) },
   ];
-  const abas = sel ? todasAbas.filter((a) => sel.has(a.id)) : todasAbas;
 
   const tabbar = abas
     .map((a) => `<button data-tab="${esc(a.id)}">${esc(a.rotulo)}</button>`)
@@ -1431,7 +1165,7 @@ export function gerarHtmlDashboard(
   const paineis = abas
     .map(
       (a) =>
-        `<section class="tab" id="tab-${esc(a.id)}"><h2 class="tabtitle">${esc(a.rotulo)}</h2>${a.corpo()}</section>`,
+        `<section class="tab" id="tab-${esc(a.id)}"><h2 class="tabtitle">${esc(a.rotulo)}</h2>${a.corpo}</section>`,
     )
     .join("\n");
 

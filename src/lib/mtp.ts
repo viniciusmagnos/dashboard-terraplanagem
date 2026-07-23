@@ -260,6 +260,55 @@ export interface MtpLinhaHorizonte {
   pts: [number, number][];
 }
 
+/** Rachura por formação geológica (polígonos em estação_m × cota_m). */
+export interface MtpEstratoGeo {
+  formacao: string;
+  layer?: string;
+  litologia?: string | null;
+  alteracao?: string | null;
+  /** classe da rachura = alteração + litologia ("RAM argilito", "SR basalto"…) */
+  material?: string;
+  categoria?: number | null;
+  poligonos: [number, number][][];
+}
+
+/** Rótulo de material do perfil (SR/RAM/RAD + litologia), como no DWG. */
+export interface MtpRotuloGeo {
+  texto: string;
+  sta_m: number;
+  cota_m: number;
+  altura?: number;
+  classe?: string; // material | categoria | nota
+}
+
+/** Camada de um furo de sondagem do perfil (profundidade da superfície, m). */
+export interface MtpCamadaSondagemPerfil {
+  de_m: number;
+  a_m: number;
+  material: string;
+  formacao?: string | null;
+  n_spt?: number | null;
+  /** categoria de escavação DNIT inferida (1=solo, 2=rocha alterada, 3=rocha sã) */
+  categoria?: number | null;
+}
+
+/** Furo de sondagem desenhado no DWG de perfil (palito), em estação/cota. */
+export interface MtpSondagemPerfil {
+  id: string;
+  tipo: string; // percussao | mista | trado | desconhecido
+  sta_m: number;
+  afast_m?: number | null;
+  lado?: string | null; // "LD" | "LE"
+  cota_topo_m?: number | null;
+  prof_m?: number | null;
+  na_m?: number | null;
+  na_seco?: boolean;
+  impenetravel_m?: number | null;
+  camadas: MtpCamadaSondagemPerfil[];
+  /** golpes SPT brutos [profundidade_m, N][] (1 por metro) */
+  golpes?: [number, number | null][];
+}
+
 export interface MtpPerfilEixo {
   eixo_id: string;
   titulo: string;
@@ -273,6 +322,12 @@ export interface MtpPerfilEixo {
   topo_3cat: MtpLinhaHorizonte[];
   na: MtpLinhaHorizonte[];
   contatos: MtpLinhaHorizonte[];
+  /** rachuras por formação (bloco novo v2) — opcional p/ pacotes antigos */
+  estratos?: MtpEstratoGeo[];
+  /** rótulos de material posicionados em estação/cota (bloco novo v2) */
+  rotulos?: MtpRotuloGeo[];
+  /** furos de sondagem do DWG de perfil (bloco novo v3) — palitos SPT */
+  sondagens?: MtpSondagemPerfil[];
   cal: Record<string, number>;
 }
 

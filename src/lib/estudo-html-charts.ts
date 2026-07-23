@@ -17,7 +17,6 @@ import {
   type MtpGeoEixo,
   type MtpGeometria,
   type MtpPacote,
-  type MtpPerfilEixo,
 } from "./mtp";
 
 /* ── Paleta (idêntica aos componentes) ────────────────────── */
@@ -628,94 +627,5 @@ export function secaoTransversalSvg(secao: SecaoLike, zOffset: number): string {
   ${legenda}${eixoCentro}${quads}
   ${linha(terreno, COR.terreno)}${linha(plataforma, COR.plataforma)}
   ${cotas}${reguaTicks.join("")}
-</svg>`;
-}
-
-/* ── 7. Perfil geológico (horizontes RAM/RAD do DWG) ──────── */
-
-const COR_RAD = "#f43f5e"; // rosa — topo RAD/RS (3ª cat)
-const COR_NA = "#38bdf8"; // azul-céu — nível d'água
-
-/** Perfil longitudinal com terreno/greide + topos de rocha (RAM 2ª, RAD 3ª) e NA. */
-export function perfilGeologicoSvg(eixo: MtpPerfilEixo): string {
-  const all: [number, number][] = [
-    ...(eixo.terreno ?? []),
-    ...(eixo.greide ?? []),
-    ...(eixo.topo_2cat ?? []).flatMap((l) => l.pts),
-    ...(eixo.topo_3cat ?? []).flatMap((l) => l.pts),
-  ];
-  if (all.length < 2)
-    return '<p class="empty">Sem geometria suficiente para plotar o perfil.</p>';
-  const W = 1000;
-  const H = 260;
-  const padL = 58;
-  const padR = 16;
-  const padT = 22;
-  const padB = 26;
-  const sMin = Math.min(...all.map((p) => p[0]));
-  const sMax = Math.max(...all.map((p) => p[0]));
-  const zMin = Math.min(...all.map((p) => p[1])) - 3;
-  const zMax = Math.max(...all.map((p) => p[1])) + 3;
-  const X = (s: number) =>
-    padL + (sMax > sMin ? (s - sMin) / (sMax - sMin) : 0) * (W - padL - padR);
-  const Y = (z: number) =>
-    padT + (zMax > zMin ? 1 - (z - zMin) / (zMax - zMin) : 0.5) * (H - padT - padB);
-  const path = (pts: [number, number][]): string =>
-    pts.length
-      ? pts.map((p, i) => `${i ? "L" : "M"}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join("")
-      : "";
-  const horizontes = (
-    lines: { pts: [number, number][] }[],
-    cor: string,
-    w: number,
-    dash?: string,
-  ): string =>
-    lines
-      .map((l) => {
-        const d = path(l.pts);
-        return d
-          ? `<path d="${d}" fill="none" stroke="${cor}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`
-          : "";
-      })
-      .join("");
-
-  const yGrid = ticks(zMin, zMax, 5)
-    .map((z) => {
-      const yy = Y(z).toFixed(1);
-      return `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="${COR.grid}" stroke-opacity="0.4" stroke-dasharray="3 3"/><text x="${padL - 6}" y="${(Y(z) + 3).toFixed(1)}" text-anchor="end" fill="${COR.tick}" font-size="11">${fmt(z, 0)}</text>`;
-    })
-    .join("");
-  const xTicks = ticks(sMin, sMax, 6)
-    .map(
-      (s) =>
-        `<text x="${X(s).toFixed(1)}" y="${H - 9}" text-anchor="middle" fill="${COR.tick}" font-size="10">${esc(staToKmLabel(s))}</text>`,
-    )
-    .join("");
-
-  // legenda (largura aproximada por caractere)
-  const leg: [string, string, boolean][] = [
-    [COR.terreno, "terreno", false],
-    [COR.cyanClaro, "greide", false],
-    [COR.barreira, "RAM (2ª cat)", false],
-    [COR_RAD, "RAD/RS (3ª cat)", false],
-    [COR_NA, "NA", true],
-  ];
-  let lx = padL;
-  const legenda = leg
-    .map(([cor, txt, dash]) => {
-      const g = `<rect x="${lx}" y="6" width="10" height="10" rx="2" fill="${cor}"${dash ? ' fill-opacity="0.7"' : ""}/><text x="${lx + 14}" y="15" fill="${COR.tick}" font-size="11">${esc(txt)}</text>`;
-      lx += 14 + txt.length * 6.6 + 14;
-      return g;
-    })
-    .join("");
-
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Perfil geológico ${esc(eixo.titulo || eixo.eixo_id)}">
-  <rect x="0" y="0" width="${W}" height="${H}" fill="${COR.canvas}" rx="10"/>
-  ${legenda}${yGrid}${xTicks}
-  <path d="${path(eixo.greide ?? [])}" fill="none" stroke="${COR.cyanClaro}" stroke-width="1.3"/>
-  <path d="${path(eixo.terreno ?? [])}" fill="none" stroke="${COR.terreno}" stroke-width="1.6"/>
-  ${horizontes(eixo.topo_3cat ?? [], COR_RAD, 2)}
-  ${horizontes(eixo.topo_2cat ?? [], COR.barreira, 2)}
-  ${horizontes(eixo.na ?? [], COR_NA, 1.2, "4 3")}
 </svg>`;
 }

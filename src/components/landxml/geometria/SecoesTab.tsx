@@ -9,7 +9,13 @@ import {
   eixosComGeometria,
   nearestSecao,
 } from "../../../lib/mtp-geometry";
-import { geotecniaDe, type MtpBarreira, type MtpPacote } from "../../../lib/mtp";
+import {
+  geotecniaDe,
+  perfilGeologicoDe,
+  type MtpBarreira,
+  type MtpPacote,
+} from "../../../lib/mtp";
+import { areaMateriaisCorte, furoPerfilMaisProximo } from "../../../lib/perfil-materiais";
 import { useEstudo } from "../cenarios/EstudoContext";
 import { EstacaoPicker } from "./EstacaoPicker";
 import { PerfilLongitudinalChart } from "./PerfilLongitudinalChart";
@@ -19,6 +25,12 @@ import { SecaoTransversalSVG } from "./SecaoTransversalSVG";
 export interface GeoSel {
   eixoId: string | null;
   sta: number | null;
+}
+
+const CAT_COR: Record<number, string> = { 1: "#34d399", 2: "#f59e0b", 3: "#f43f5e" };
+function rotuloN(nMin: number | null, nMax: number | null): string {
+  if (nMin == null) return "—";
+  return nMin === nMax ? String(nMin) : `${nMin}–${nMax}`;
 }
 
 function rotuloFonte(fonte: string): string {
@@ -103,6 +115,32 @@ export function SecoesTab({
     }
     return best;
   }, [pacote, eixoAtivo, secao]);
+
+  // Furo do PERFIL geológico mais próximo (mesmo eixo) → área por material no corte
+  const perfilGeo = useMemo(() => perfilGeologicoDe(pacote), [pacote]);
+  const furoPerfil = useMemo(() => {
+    if (!eixoAtivo || !secao || !perfilGeo) return null;
+    const ep = perfilGeo.eixos.find((e) => e.eixo_id === eixoAtivo.eixo_id);
+    return furoPerfilMaisProximo(ep?.sondagens, secao.sta_m, 300);
+  }, [perfilGeo, eixoAtivo, secao]);
+  const areaMat = useMemo(() => {
+    if (!secao || !furoPerfil || (secao.area_corte ?? 0) <= 0.1) return null;
+    return areaMateriaisCorte(secao, furoPerfil.furo, furoPerfil.dist_m);
+  }, [secao, furoPerfil]);
+
+  // cota absoluta do NA (lençol) − z_offset: preferir o furo do perfil, senão o UTM
+  const naCotaRel = useMemo(() => {
+    if (!geometria) return null;
+    const fp = furoPerfil?.furo;
+    if (fp?.na_m != null && fp.cota_topo_m != null) {
+      return fp.cota_topo_m - fp.na_m - geometria.z_offset_m;
+    }
+    const fu = furoProximo?.sondagem;
+    if (fu?.na_m != null && fu.cota_m != null) {
+      return fu.cota_m - fu.na_m - geometria.z_offset_m;
+    }
+    return null;
+  }, [furoPerfil, furoProximo, geometria]);
 
   const barreirasVisiveis: MtpBarreira[] = useMemo(
     () => [
@@ -201,6 +239,8 @@ export function SecoesTab({
             exagero={exagero}
             alargamentoPct={alargPct}
             furo={furoProximo}
+            bandasMaterial={areaMat?.bandas ?? null}
+            naCotaRel={naCotaRel}
           />
           <div className="flex items-center justify-between gap-2 flex-wrap text-[11px] text-muted-foreground">
             <span>
@@ -227,6 +267,72 @@ export function SecoesTab({
               </span>
             )}
           </div>
+
+          {/* Fase 2 — área de cada material no corte (furo do perfil × seção) */}
+          {areaMat && areaMat.itens.length > 0 && (
+            <div className="bg-surface border border-border rounded-lg p-3 mt-1.5">
+              <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                <p className="text-sm font-medium">
+                  Material escavado no corte desta seção
+                </p>
+                <span className="text-[11px] text-muted-foreground">
+                  furo <span className="text-foreground">{areaMat.furo_id}</span> a{" "}
+                  {fmt(areaMat.dist_m, 0)} m · corte {fmt(secao.area_corte, 1)} m²
+                  {areaMat.area_corte_m2 > 0 &&
+                    ` · cobertura ${Math.round(
+                      (100 * areaMat.area_coberta_m2) / areaMat.area_corte_m2,
+                    )}%`}
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-muted-foreground">
+                      <th className="pr-3 py-1">Material</th>
+                      <th className="pr-3 py-1 text-right">SPT</th>
+                      <th className="pr-3 py-1 text-right">Cat.</th>
+                      <th className="pr-3 py-1 text-right">Área (m²)</th>
+                      <th className="pr-3 py-1 text-right">%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {areaMat.itens.map((it, i) => (
+                      <tr key={i} className="border-t border-border align-top">
+                        <td className="pr-3 py-1">
+                          {it.material}
+                          {it.extrapolado && (
+                            <span className="text-muted-foreground"> (extrapolado)</span>
+                          )}
+                        </td>
+                        <td className="pr-3 py-1 text-right tabular-nums text-muted-foreground">
+                          {rotuloN(it.n_min, it.n_max)}
+                        </td>
+                        <td
+                          className="pr-3 py-1 text-right font-medium"
+                          style={{
+                            color: it.categoria ? CAT_COR[it.categoria] : undefined,
+                          }}
+                        >
+                          {it.categoria ? `${it.categoria}ª` : "—"}
+                        </td>
+                        <td className="pr-3 py-1 text-right tabular-nums">
+                          {fmt(it.fracao * secao.area_corte, 1)}
+                        </td>
+                        <td className="pr-3 py-1 text-right tabular-nums text-muted-foreground">
+                          {Math.round(it.fracao * 100)}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1.5">
+                Composição por profundidade abaixo do terreno (pilha de camadas do
+                furo do perfil × corte da seção), rateada ao corte oficial da seção.
+                Abaixo do fim do furo, a última camada é extrapolada.
+              </p>
+            </div>
+          )}
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg p-6 text-center text-sm text-muted-foreground">
