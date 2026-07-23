@@ -300,3 +300,243 @@ describe("gerarHtmlDashboard", () => {
     expect(parsed.pacote.drenagem.dispositivos).toHaveLength(1);
   });
 });
+
+/** Pacote sintético com blocos geotecnia (ensaios + materiais) + drenagem. */
+function pacoteComBlocos(): MtpPacote {
+  return {
+    ...pacote,
+    sondagens: {
+      versao: 1,
+      sondagens: [
+        {
+          id: "SP-01",
+          tipo: "mista",
+          arquivo: "sp01.pdf",
+          norte: null,
+          este: null,
+          cota_m: 512.34,
+          cota_fonte: "rt_locada",
+          prof_total_m: 12.5,
+          na_m: 3.2,
+          na_seco: false,
+          eixo_id: pacote.eixos[0]?.id ?? "E1",
+          sta_m: 1000,
+          offset_m: 5,
+          camadas: [{ de_m: 0, a_m: 2, n_spt: 3, material: "argila", categoria: 1 }],
+          solo_mole_ate_m: 2,
+          impenetravel_m: null,
+          confianca: 0.9,
+          ensaios: [
+            {
+              furo_id: "SP-01",
+              ident: "AM-1",
+              registro: "R1",
+              prof_de_m: 0,
+              prof_a_m: 1,
+              energia: "PN",
+              w_nat_pct: 22.5,
+              w_ot_pct: 18.1,
+              gamma_d_max_knm3: 17.8,
+              cbr_pct: 12.4,
+              expansao_pct: 0.6,
+              mct: "LG'",
+              ll_pct: 42,
+              lp_pct: 25,
+              ip_pct: 17,
+              hrb: "A-7-5",
+              uscs: "CL",
+              massa_esp_ap_gcm3: null,
+              dens_real_graos: null,
+              granulometria: { "#200": 63 },
+              fonte: "consolidado",
+            },
+          ],
+        },
+      ],
+      resumo: {
+        n_total: 1,
+        n_posicionadas: 1,
+        n_com_coordenada: 0,
+        por_tipo: { mista: 1 },
+        prof_media_m: 12.5,
+        na_medio_m: 3.2,
+        n_com_solo_mole: 1,
+        n_com_impenetravel: 0,
+        n_com_ensaios: 1,
+        n_amostras_lab: 1,
+      },
+      materiais: {
+        versao: 1,
+        max_dist_m: 100,
+        cobertura_corte: 0.8,
+        corte_1cat: 1000,
+        corte_2cat: 200,
+        corte_3cat: 50,
+        v_solo_mole: 300,
+        aterro_solo_mole_km: 0.4,
+        por_eixo: [
+          {
+            eixo_id: pacote.eixos[0]?.id ?? "E1",
+            n_furos: 1,
+            v_corte_total: 1250,
+            v_corte_coberto: 1000,
+            corte_1cat: 1000,
+            corte_2cat: 200,
+            corte_3cat: 50,
+            aterro_total: 500,
+            aterro_solo_mole_m: 400,
+            v_solo_mole: 300,
+          },
+        ],
+        bins: [],
+        warnings: [],
+      },
+      params: {},
+      warnings: [],
+    },
+    perfil_geologico: {
+      versao: 1,
+      eixos: [
+        {
+          eixo_id: pacote.eixos[0]?.id ?? "E1",
+          titulo: "Perfil E1",
+          sta_min_m: 0,
+          sta_max_m: 1000,
+          terreno: [
+            [0, 500],
+            [1000, 480],
+          ],
+          greide: [
+            [0, 495],
+            [1000, 485],
+          ],
+          topo_2cat: [{ pts: [[0, 490], [1000, 472]] }],
+          topo_3cat: [{ pts: [[0, 485], [1000, 468]] }],
+          na: [{ pts: [[0, 488], [1000, 470]] }],
+          contatos: [],
+          cal: {},
+        },
+      ],
+      categorias_por_eixo: [
+        {
+          eixo_id: pacote.eixos[0]?.id ?? "E1",
+          v_corte_total: 1250,
+          v_corte_coberto: 1100,
+          corte_1cat: 900,
+          corte_2cat: 250,
+          corte_3cat: 100,
+        },
+      ],
+      params: {},
+      warnings: [],
+    },
+    drenagem: {
+      dispositivos: [{ id: "DR-1", familia: "sarjeta", unidade: "m", extensao_m: 50 }],
+      travessias: [],
+      bacias: [],
+      resumo: {
+        n_dispositivos: 1,
+        n_travessias: 0,
+        n_bacias: 0,
+        extensao_total_m: 50,
+        por_familia: [],
+        por_eixo: [],
+        travessias_por_tipo: {},
+        por_status: {},
+        cobertura: { folhas_ausentes: [], sentidos: {} },
+      },
+    },
+  } as unknown as MtpPacote;
+}
+
+describe("exportação por abas (opção `abas`)", () => {
+  it("recorta a barra de abas e o JSON embutido do HTML", () => {
+    const html = gerarHtmlDashboard(montarInput(), {
+      incluirGeometria: false,
+      abas: ["cenarios"],
+    });
+    // só a aba pedida entra na tabbar
+    expect(html).toContain('data-tab="cenarios"');
+    expect(html).not.toContain('data-tab="visao"');
+    expect(html).not.toContain('data-tab="orcamento"');
+    expect(html).not.toContain('data-tab="bruckner"');
+    // o JSON embutido carrega o recorte
+    const parsed = JSON.parse(extrairJson(html));
+    expect(parsed.meta.abas_exportadas).toEqual(["cenarios"]);
+  });
+
+  it("abas de cenário mantêm estado + orçamentos por cenário", () => {
+    const dados = montarDadosCompletos(montarInput(), {
+      incluirGeometria: false,
+      abas: ["comparativo"],
+    }) as any;
+    expect(dados.meta.abas_exportadas).toEqual(["comparativo"]);
+    expect(dados.estado).toBeDefined();
+    expect(dados.cenarios_computados.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("recorte só-geotecnia descarta estado, cenários e o bloco de drenagem", () => {
+    const dados = montarDadosCompletos(montarInput({ pacote: pacoteComBlocos() }), {
+      incluirGeometria: false,
+      abas: ["geotecnia"],
+    }) as any;
+    expect(Object.keys(dados).sort()).toEqual(["meta", "pacote", "resumo"]);
+    expect(dados.estado).toBeUndefined();
+    expect(dados.cenarios_computados).toBeUndefined();
+    expect(dados.pacote.sondagens).toBeDefined();
+    expect(dados.pacote.drenagem).toBeUndefined();
+  });
+
+  it("recorte só-drenagem mantém drenagem e descarta as sondagens", () => {
+    const dados = montarDadosCompletos(montarInput({ pacote: pacoteComBlocos() }), {
+      incluirGeometria: false,
+      abas: ["drenagem"],
+    }) as any;
+    expect(dados.pacote.drenagem).toBeDefined();
+    expect(dados.pacote.sondagens).toBeUndefined();
+    expect(dados.pacote.perfil_geologico).toBeUndefined();
+  });
+
+  it("sem `abas` (ou vazio) exporta tudo — comportamento inalterado", () => {
+    const cheio = montarDadosCompletos(montarInput({ pacote: pacoteComBlocos() }), {
+      incluirGeometria: false,
+    }) as any;
+    expect(cheio.meta.abas_exportadas).toBe("todas");
+    expect(cheio.pacote.sondagens).toBeDefined();
+    expect(cheio.pacote.drenagem).toBeDefined();
+
+    const vazio = montarDadosCompletos(montarInput({ pacote: pacoteComBlocos() }), {
+      incluirGeometria: false,
+      abas: [],
+    }) as any;
+    expect(vazio.meta.abas_exportadas).toBe("todas");
+    expect(vazio.estado).toBeDefined();
+  });
+
+  it("relatório de geotecnia inclui ensaios de laboratório e material por eixo", () => {
+    const html = gerarHtmlDashboard(montarInput({ pacote: pacoteComBlocos() }), {
+      incluirGeometria: false,
+      abas: ["geotecnia"],
+    });
+    expect(html).toContain('data-tab="geotecnia"');
+    // KPI e tabela de ensaios (CBR/Proctor/Atterberg/MCT)
+    expect(html).toContain("Com ensaio lab");
+    expect(html).toContain("Ensaios de laboratório");
+    expect(html).toContain("CBR (%)");
+    expect(html).toContain("LG'"); // classe MCT do ensaio
+    // Material escavado por eixo (cruzamento furo × corte)
+    expect(html).toContain("Material escavado por eixo");
+    // Perfil geológico (horizontes RAM/RAD do DWG) com SVG e comparação
+    expect(html).toContain("Perfil geológico");
+    expect(html).toContain("RAD/RS (3ª cat)");
+    expect(html).toContain("Perfil E1");
+    expect(html).toContain('aria-label="Perfil geológico Perfil E1"');
+    // Cota do furo com marcador de origem "loc" (RT locada)
+    expect(html).toContain("Cota (m)");
+    expect(html).toContain(">loc<");
+    // os KPIs de ensaio também vão para o resumo do JSON embutido
+    const parsed = JSON.parse(extrairJson(html));
+    expect(parsed.resumo.n_furos_com_ensaio).toBe(1);
+    expect(parsed.resumo.n_amostras_lab).toBe(1);
+  });
+});
