@@ -5,17 +5,24 @@
  * para abrir, imprimir ou enviar a outra IA. Também baixa os mesmos dados
  * como JSON puro.
  *
+ * Um seletor de abas permite exportar SÓ os dados de algumas abas (ex.: só
+ * Cenários, ou só Geotecnia, ou só Drenagem) — o recorte vale tanto para o
+ * relatório visual quanto para o JSON embutido/baixado.
+ *
  * Ao contrário do Excel (server-side), tudo vem do EstudoContext em memória
  * — não depende de sincronização com o backend.
  */
 import { useState } from "react";
 import { Braces, ChevronDown, FileCode2, Loader2 } from "lucide-react";
 import {
+  ABAS_EXPORT,
   gerarHtmlDashboard,
   montarDadosCompletos,
   nomeArquivo,
+  type AbaExport,
   type DadosEstudoInput,
 } from "../../lib/estudo-html-export";
+import { drenagemDe, geotecniaDe } from "../../lib/mtp";
 import { useEstudo } from "./cenarios/EstudoContext";
 
 type Acao = "html" | "html-leve" | "json";
@@ -37,6 +44,42 @@ export function BotaoExportarHtml() {
   const [gerando, setGerando] = useState<Acao | null>(null);
 
   const temGeometria = !!ctx.pacote.geometria?.eixos?.length;
+  const temGeotecnia = !!geotecniaDe(ctx.pacote)?.sondagens?.length;
+  const temDrenagem = !!drenagemDe(ctx.pacote)?.dispositivos?.length;
+
+  // Abas que fazem sentido para ESTE pacote (geotecnia/drenagem só se houver bloco).
+  const disponiveis = ABAS_EXPORT.filter((a) =>
+    a.requer === "geotecnia"
+      ? temGeotecnia
+      : a.requer === "drenagem"
+        ? temDrenagem
+        : true,
+  );
+  const idsDisponiveis = disponiveis.map((a) => a.id);
+
+  // Seleção de abas — inicia com todas; ressincroniza se o pacote mudar.
+  const [chave, setChave] = useState(idsDisponiveis.join(","));
+  const [selecionadas, setSelecionadas] = useState<Set<AbaExport>>(
+    () => new Set(idsDisponiveis),
+  );
+  if (chave !== idsDisponiveis.join(",")) {
+    setChave(idsDisponiveis.join(","));
+    setSelecionadas(new Set(idsDisponiveis));
+  }
+
+  const nSel = selecionadas.size;
+  const nDisp = disponiveis.length;
+  const parcial = nSel > 0 && nSel < nDisp;
+
+  const alternar = (id: AbaExport) =>
+    setSelecionadas((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const marcarTodas = () => setSelecionadas(new Set(idsDisponiveis));
+  const limpar = () => setSelecionadas(new Set());
 
   const montarInput = (): DadosEstudoInput => ({
     pacote: ctx.pacote,
@@ -53,28 +96,42 @@ export function BotaoExportarHtml() {
     geradoEm: new Date().toISOString(),
   });
 
+  /** Recorte de abas para as funções de export (undefined = todas). */
+  const abasSelecionadas = (): AbaExport[] | undefined =>
+    parcial ? idsDisponiveis.filter((id) => selecionadas.has(id)) : undefined;
+
+  /** Sufixo de arquivo que identifica o recorte (uma aba → o id; várias → "-selecao"). */
+  const sufixoRecorte = (): string => {
+    if (!parcial) return "";
+    const ids = idsDisponiveis.filter((id) => selecionadas.has(id));
+    return ids.length === 1 ? `-${ids[0]}` : "-selecao";
+  };
+
   const executar = (acao: Acao) => {
-    if (gerando) return;
+    if (gerando || nSel === 0) return;
     setGerando(acao);
     // setTimeout(0): deixa o spinner pintar antes de montar a string (pacotes
     // com geometria podem ter alguns MB).
     window.setTimeout(() => {
       try {
         const input = montarInput();
+        const abas = abasSelecionadas();
+        const recorte = sufixoRecorte();
         if (acao === "json") {
           const dados = montarDadosCompletos(input, {
             incluirGeometria: temGeometria,
+            abas,
           });
           baixar(
-            nomeArquivo(ctx.pacote, "json", "-dados"),
+            nomeArquivo(ctx.pacote, "json", `-dados${recorte}`),
             JSON.stringify(dados, null, temGeometria ? undefined : 2),
             "application/json;charset=utf-8",
           );
         } else {
           const incluirGeometria = acao === "html";
-          const html = gerarHtmlDashboard(input, { incluirGeometria });
+          const html = gerarHtmlDashboard(input, { incluirGeometria, abas });
           baixar(
-            nomeArquivo(ctx.pacote, "html", incluirGeometria ? "" : "-leve"),
+            nomeArquivo(ctx.pacote, "html", `${incluirGeometria ? "" : "-leve"}${recorte}`),
             html,
             "text/html;charset=utf-8",
           );
@@ -132,10 +189,52 @@ export function BotaoExportarHtml() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full mt-1 z-50 w-80 bg-surface border border-border rounded-lg shadow-xl py-1">
+            {/* Seletor de abas */}
+            <div className="px-3 pt-1.5 pb-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Abas incluídas ({nSel}/{nDisp})
+                </span>
+                <span className="flex items-center gap-1.5 text-[11px]">
+                  <button onClick={marcarTodas} className="text-manta hover:underline">
+                    Todas
+                  </button>
+                  <span className="text-border">·</span>
+                  <button onClick={limpar} className="text-manta hover:underline">
+                    Nenhuma
+                  </button>
+                </span>
+              </div>
+              <div className="mt-1.5 grid gap-0.5 max-h-52 overflow-y-auto pr-0.5">
+                {disponiveis.map((a) => {
+                  const on = selecionadas.has(a.id);
+                  return (
+                    <label
+                      key={a.id}
+                      className="flex items-center gap-2 px-1.5 py-1 rounded text-[12.5px] cursor-pointer hover:bg-surface-hover"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={() => alternar(a.id)}
+                        className="accent-manta"
+                      />
+                      <span className={on ? "" : "text-muted-foreground"}>{a.rotulo}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              {nSel === 0 && (
+                <p className="mt-1 text-[11px] text-manta">Selecione ao menos uma aba.</p>
+              )}
+            </div>
+
+            {/* Ações */}
             {opcoes
               .filter((op) => !op.oculto)
               .map((op) => {
-                const desabilitado = !!gerando && gerando !== op.acao;
+                const desabilitado =
+                  nSel === 0 || (!!gerando && gerando !== op.acao);
                 return (
                   <button
                     key={op.acao}
@@ -154,6 +253,11 @@ export function BotaoExportarHtml() {
                         <op.Icone size={13} className="shrink-0 text-muted-foreground" />
                       )}
                       {op.rotulo}
+                      {parcial && (
+                        <span className="ml-auto text-[10px] text-manta shrink-0">
+                          {nSel} aba{nSel > 1 ? "s" : ""}
+                        </span>
+                      )}
                     </span>
                     <span className="block pl-[21px] text-[11px] text-muted-foreground">
                       {op.detalhe}
