@@ -23,6 +23,7 @@ import {
   type DadosEstudoInput,
 } from "./estudo-html-export";
 import { validarPacote, type MtpPacote } from "./mtp";
+import { perfilGeologicoSvg, secaoTransversalSvg } from "./estudo-html-charts";
 
 const pacote: MtpPacote = validarPacote(
   readFileSync(
@@ -414,6 +415,38 @@ function pacoteComBlocos(): MtpPacote {
           topo_3cat: [{ pts: [[0, 485], [1000, 468]] }],
           na: [{ pts: [[0, 488], [1000, 470]] }],
           contatos: [],
+          estratos: [
+            {
+              formacao: "Serra Geral",
+              litologia: "basalto",
+              alteracao: "RAM",
+              material: "RAM basalto",
+              categoria: 2,
+              poligonos: [
+                [
+                  [0, 490],
+                  [1000, 472],
+                  [1000, 468],
+                  [0, 485],
+                ],
+              ],
+            },
+          ],
+          rotulos: [],
+          sondagens: [
+            {
+              id: "SP-P1",
+              tipo: "mista",
+              sta_m: 500,
+              cota_topo_m: 490,
+              prof_m: 12,
+              na_m: 4,
+              camadas: [
+                { de_m: 0, a_m: 5, material: "argila", categoria: 1, n_spt: 6 },
+                { de_m: 5, a_m: 12, material: "basalto RAM", categoria: 2, n_spt: 40 },
+              ],
+            },
+          ],
           cal: {},
         },
       ],
@@ -526,11 +559,13 @@ describe("exportação por abas (opção `abas`)", () => {
     expect(html).toContain("LG'"); // classe MCT do ensaio
     // Material escavado por eixo (cruzamento furo × corte)
     expect(html).toContain("Material escavado por eixo");
-    // Perfil geológico (horizontes RAM/RAD do DWG) com SVG e comparação
+    // Perfil geológico com hachuras por material (estratos) + palito de sondagem
     expect(html).toContain("Perfil geológico");
-    expect(html).toContain("RAD/RS (3ª cat)");
     expect(html).toContain("Perfil E1");
     expect(html).toContain('aria-label="Perfil geológico Perfil E1"');
+    expect(html).toContain('id="pg0c2"'); // <pattern> de hachura da 2ª cat
+    expect(html).toContain("RAM basalto"); // rótulo do estrato
+    expect(html).toContain('stroke-width="5"'); // camada do palito de sondagem
     // Cota do furo com marcador de origem "loc" (RT locada)
     expect(html).toContain("Cota (m)");
     expect(html).toContain(">loc<");
@@ -538,5 +573,81 @@ describe("exportação por abas (opção `abas`)", () => {
     const parsed = JSON.parse(extrairJson(html));
     expect(parsed.resumo.n_furos_com_ensaio).toBe(1);
     expect(parsed.resumo.n_amostras_lab).toBe(1);
+  });
+});
+
+describe("SVGs de geotecnia (charts)", () => {
+  it("seção transversal: faixas de material por categoria + NA", () => {
+    const secao = {
+      sta_m: 500,
+      terreno: [-10, 5, 0, 6, 10, 5],
+      plataforma: [-10, 2, 0, 2, 10, 2],
+      area_corte: 30,
+      area_aterro: 0,
+    };
+    const bandas = [
+      {
+        categoria: 1, material: "argila", extrapolado: false,
+        rings: [[[-8, 5], [8, 5], [8, 3], [-8, 3]]],
+      },
+      {
+        categoria: 3, material: "basalto", extrapolado: true,
+        rings: [[[-8, 3], [8, 3], [8, 2], [-8, 2]]],
+      },
+    ];
+    const svg = secaoTransversalSvg(secao as any, 100, {
+      bandas: bandas as any,
+      naCotaRel: 4,
+    });
+    expect(svg).toContain("#34d399"); // 1ª cat
+    expect(svg).toContain("#f43f5e"); // 3ª cat
+    expect(svg).toContain("corte por material");
+    expect(svg).toContain("NA 104"); // 4 + zOffset 100
+    expect(svg).toContain("argila"); // <title> da banda
+  });
+
+  it("perfil geológico: hachuras (estratos) + palitos de sondagem", () => {
+    const eixo = {
+      eixo_id: "E1", titulo: "Perfil E1", sta_min_m: 0, sta_max_m: 1000,
+      terreno: [[0, 500], [1000, 480]], greide: [[0, 495], [1000, 485]],
+      topo_2cat: [], topo_3cat: [], na: [], contatos: [],
+      estratos: [
+        {
+          formacao: "SG", litologia: "basalto", alteracao: "RAM",
+          material: "RAM basalto", categoria: 2,
+          poligonos: [[[0, 490], [1000, 472], [1000, 468], [0, 485]]],
+        },
+      ],
+      rotulos: [],
+      sondagens: [
+        {
+          id: "SP-1", tipo: "mista", sta_m: 500, cota_topo_m: 490, prof_m: 12, na_m: 4,
+          camadas: [
+            { de_m: 0, a_m: 5, material: "argila", categoria: 1, n_spt: 6 },
+            { de_m: 5, a_m: 12, material: "basalto", categoria: 2, n_spt: 40 },
+          ],
+        },
+      ],
+      cal: {},
+    };
+    const svg = perfilGeologicoSvg(eixo as any, 0);
+    expect(svg).toContain('id="pg0c2"'); // <pattern> da 2ª cat
+    expect(svg).toContain("url(#pg0c2)"); // estrato preenchido com o pattern
+    expect(svg).toContain("RAM basalto"); // rótulo do material
+    expect(svg).toContain("SP-1"); // rótulo do palito
+    expect(svg).toContain('stroke-width="5"'); // camada do palito
+    expect(svg).toContain("#34d399"); // camada 1ª cat do palito
+  });
+
+  it("perfil sem estratos/sondagens desenha só os horizontes", () => {
+    const eixo = {
+      eixo_id: "E1", titulo: "E1", sta_min_m: 0, sta_max_m: 100,
+      terreno: [[0, 10], [100, 8]], greide: [[0, 9], [100, 8.5]],
+      topo_2cat: [{ pts: [[0, 7], [100, 6]] }], topo_3cat: [], na: [],
+      contatos: [], cal: {},
+    };
+    const svg = perfilGeologicoSvg(eixo as any, 1);
+    expect(svg).toContain("topo RAM (2ª)"); // legenda de horizontes
+    expect(svg).not.toContain("<pattern"); // sem hachuras
   });
 });

@@ -31,6 +31,7 @@ import {
   type PlantaPonto,
 } from "./estudo-html-charts";
 import { fmt, fmtBRL, fmtKm } from "./format";
+import { areaMateriaisCorte, furoPerfilMaisProximo } from "./perfil-materiais";
 import {
   drenagemDe,
   geotecniaDe,
@@ -518,6 +519,9 @@ function tabSecoes(input: DadosEstudoInput): {
     )
     .join("");
 
+  // Furos do perfil geológico por eixo → área por material + NA na seção.
+  const pg = perfilGeologicoDe(input.pacote);
+
   // Seletor de seções (mapa pré-renderizado, cap MAX_SECOES).
   const mapa: Record<string, string> = {};
   let optgroups = "";
@@ -527,13 +531,24 @@ function tabSecoes(input: DadosEstudoInput): {
   for (const ge of geo.eixos) {
     const secs = ge.secoes ?? [];
     if (!secs.length) continue;
+    const sonds = pg?.eixos.find((pe) => pe.eixo_id === ge.eixo_id)?.sondagens ?? [];
     const quota = total <= MAX_SECOES ? secs.length : Math.max(1, Math.round((MAX_SECOES * secs.length) / total));
     const step = Math.max(1, Math.ceil(secs.length / quota));
     let opts = "";
     for (let i = 0; i < secs.length; i += step) {
       const sec = secs[i];
       const key = `${ge.eixo_id}|${sec.sta_m}`;
-      mapa[key] = secaoTransversalSvg(sec, zOff);
+      // furo do perfil mais próximo → faixas de material no corte + cota do NA
+      const furo = furoPerfilMaisProximo(sonds, sec.sta_m, 300);
+      const bandas =
+        furo && (sec.area_corte ?? 0) > 0.1
+          ? areaMateriaisCorte(sec, furo.furo, furo.dist_m)?.bandas ?? null
+          : null;
+      const naCotaRel =
+        furo?.furo.na_m != null && furo.furo.cota_topo_m != null
+          ? furo.furo.cota_topo_m - furo.furo.na_m - zOff
+          : null;
+      mapa[key] = secaoTransversalSvg(sec, zOff, { bandas, naCotaRel });
       opts += `<option value="${esc(key)}">${esc(staToKmLabel(sec.sta_m))}</option>`;
       if (primeira == null) primeira = key;
       mostradas++;
@@ -676,8 +691,8 @@ function tabGeotecnia(
   if (pg) {
     const strips = pg.eixos
       .map(
-        (e) =>
-          `<div class="strip"><div class="strip-t">${esc(e.titulo || nomeEixo(input.pacote, e.eixo_id))} <span class="mut">(${esc(staToKmLabel(e.sta_min_m))} → ${esc(staToKmLabel(e.sta_max_m))})</span></div>${perfilGeologicoSvg(e)}</div>`,
+        (e, i) =>
+          `<div class="strip"><div class="strip-t">${esc(e.titulo || nomeEixo(input.pacote, e.eixo_id))} <span class="mut">(${esc(staToKmLabel(e.sta_min_m))} → ${esc(staToKmLabel(e.sta_max_m))})</span></div>${perfilGeologicoSvg(e, i)}</div>`,
       )
       .join("");
 

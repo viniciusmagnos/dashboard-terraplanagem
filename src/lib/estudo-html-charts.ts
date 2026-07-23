@@ -18,7 +18,9 @@ import {
   type MtpGeometria,
   type MtpPacote,
   type MtpPerfilEixo,
+  type MtpSondagemPerfil,
 } from "./mtp";
+import type { BandaMaterialCorte } from "./perfil-materiais";
 
 /* ── Paleta (idêntica aos componentes) ────────────────────── */
 export const COR = {
@@ -39,6 +41,16 @@ export const COR = {
   eixoRotatoria: "#f472b6",
   eixoTransicao: "#94a3b8",
 };
+
+/** Categoria de escavação DNIT (1=solo, 2=rocha alterada, 3=rocha sã). */
+export const COR_CAT: Record<number, string> = {
+  1: "#34d399",
+  2: "#f59e0b",
+  3: "#f43f5e",
+};
+const COR_SLATE = "#64748b"; // sem categoria
+const COR_RAD = "#f43f5e"; // topo RAD/RS (3ª cat)
+const COR_NA = "#38bdf8"; // nível d'água (lençol)
 
 const corEixo = (tipo?: string): string =>
   tipo === "acesso"
@@ -519,7 +531,14 @@ export interface SecaoLike {
   area_aterro: number;
 }
 
-export function secaoTransversalSvg(secao: SecaoLike, zOffset: number): string {
+export function secaoTransversalSvg(
+  secao: SecaoLike,
+  zOffset: number,
+  opts: { bandas?: BandaMaterialCorte[] | null; naCotaRel?: number | null } = {},
+): string {
+  const bandas = opts.bandas ?? null;
+  const temBandas = !!bandas && bandas.length > 0;
+  const naCotaRel = opts.naCotaRel ?? null;
   const W = 860;
   const H = 340;
   const pad = 44;
@@ -569,7 +588,10 @@ export function secaoTransversalSvg(secao: SecaoLike, zOffset: number): string {
         db: number,
         corte: boolean,
       ) =>
-        `<polygon points="${X(a).toFixed(1)},${Y(ta).toFixed(1)} ${X(b).toFixed(1)},${Y(tb).toFixed(1)} ${X(b).toFixed(1)},${Y(db).toFixed(1)} ${X(a).toFixed(1)},${Y(da).toFixed(1)}" fill="${corte ? COR.corte : COR.aterro}" fill-opacity="0.35"/>`;
+        // com faixas de material, o corte vira as bandas coloridas (abaixo)
+        corte && temBandas
+          ? ""
+          : `<polygon points="${X(a).toFixed(1)},${Y(ta).toFixed(1)} ${X(b).toFixed(1)},${Y(tb).toFixed(1)} ${X(b).toFixed(1)},${Y(db).toFixed(1)} ${X(a).toFixed(1)},${Y(da).toFixed(1)}" fill="${corte ? COR.corte : COR.aterro}" fill-opacity="0.35"/>`;
       for (let i = 0; i + 1 < xs.length; i++) {
         const a = xs[i];
         const b = xs[i + 1];
@@ -593,6 +615,29 @@ export function secaoTransversalSvg(secao: SecaoLike, zOffset: number): string {
       }
     }
   }
+
+  // faixas de material no corte (furo do perfil), coloridas por categoria
+  const bandasSvg = temBandas
+    ? bandas!
+        .map((band) => {
+          const cor = band.categoria ? COR_CAT[band.categoria] ?? COR_SLATE : COR_SLATE;
+          return band.rings
+            .map((r) => {
+              const pts = r
+                .map(([o, z]) => `${X(o).toFixed(1)},${Y(z).toFixed(1)}`)
+                .join(" ");
+              return `<polygon points="${pts}" fill="${cor}" fill-opacity="${band.extrapolado ? 0.22 : 0.5}" stroke="${cor}" stroke-opacity="0.4" stroke-width="0.5"><title>${esc(band.material)}${band.categoria ? ` · ${band.categoria}ª cat` : ""}${band.extrapolado ? " · extrapolado (abaixo do furo)" : ""}</title></polygon>`;
+            })
+            .join("");
+        })
+        .join("")
+    : "";
+
+  // nível d'água (lençol) — linha horizontal quando cai dentro da faixa
+  const naSvg =
+    naCotaRel != null && naCotaRel >= zMin && naCotaRel <= zMax
+      ? `<line x1="${X(offMin).toFixed(1)}" y1="${Y(naCotaRel).toFixed(1)}" x2="${X(offMax).toFixed(1)}" y2="${Y(naCotaRel).toFixed(1)}" stroke="${COR_NA}" stroke-width="1.4" stroke-dasharray="6 3" stroke-opacity="0.9"/><text x="${(X(offMax) - 4).toFixed(1)}" y="${(Y(naCotaRel) - 3).toFixed(1)}" text-anchor="end" font-size="10" fill="${COR_NA}">NA ${fmt(naCotaRel + zOffset, 1)}</text>`
+      : "";
 
   const linha = (pares: Par[], cor: string) => {
     const d = pares
@@ -621,33 +666,104 @@ export function secaoTransversalSvg(secao: SecaoLike, zOffset: number): string {
     );
   }
 
-  const legenda = `<text x="${pad}" y="16" fill="${COR.terreno}" font-size="11">terreno</text><text x="${pad + 60}" y="16" fill="${COR.plataforma}" font-size="11">plataforma</text><text x="${pad + 150}" y="16" fill="${COR.corte}" font-size="11">corte</text><text x="${pad + 200}" y="16" fill="${COR.aterro}" font-size="11">aterro</text><text x="${W - pad}" y="16" text-anchor="end" fill="${COR.tick}" font-size="10">corte ${fmt(secao.area_corte, 1)} m² · aterro ${fmt(secao.area_aterro, 1)} m²</text>`;
+  const corteLabel = temBandas
+    ? `<text x="${pad + 150}" y="16" fill="${COR.tick}" font-size="11">corte por material ↓</text>`
+    : `<text x="${pad + 150}" y="16" fill="${COR.corte}" font-size="11">corte</text>`;
+  const aterroX = temBandas ? pad + 270 : pad + 200;
+  const naLabel = naSvg
+    ? `<text x="${aterroX + 56}" y="16" fill="${COR_NA}" font-size="11">NA</text>`
+    : "";
+  const legenda = `<text x="${pad}" y="16" fill="${COR.terreno}" font-size="11">terreno</text><text x="${pad + 60}" y="16" fill="${COR.plataforma}" font-size="11">plataforma</text>${corteLabel}<text x="${aterroX}" y="16" fill="${COR.aterro}" font-size="11">aterro</text>${naLabel}<text x="${W - pad}" y="16" text-anchor="end" fill="${COR.tick}" font-size="10">corte ${fmt(secao.area_corte, 1)} m² · aterro ${fmt(secao.area_aterro, 1)} m²</text>`;
 
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Seção transversal ${esc(staToKmLabel(secao.sta_m))}">
   <rect x="0" y="0" width="${W}" height="${H}" fill="${COR.canvas}" rx="10"/>
-  ${legenda}${eixoCentro}${quads}
-  ${linha(terreno, COR.terreno)}${linha(plataforma, COR.plataforma)}
+  ${legenda}${eixoCentro}${quads}${bandasSvg}
+  ${linha(terreno, COR.terreno)}${linha(plataforma, COR.plataforma)}${naSvg}
   ${cotas}${reguaTicks.join("")}
 </svg>`;
 }
 
-/* ── 7. Perfil geológico (horizontes RAM/RAD do DWG) ──────── */
+/* ── 7. Perfil geológico (horizontes + rachuras + palitos SPT) ── */
 
-const COR_RAD = "#f43f5e"; // rosa — topo RAD/RS (3ª cat)
-const COR_NA = "#38bdf8"; // azul-céu — nível d'água
+/** Centro de massa aproximado de um polígono (rótulo do estrato). */
+function centroide(pts: [number, number][]): [number, number] | null {
+  if (pts.length < 3) return null;
+  let a = 0;
+  let cx = 0;
+  let cy = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [x0, y0] = pts[i];
+    const [x1, y1] = pts[(i + 1) % pts.length];
+    const cross = x0 * y1 - x1 * y0;
+    a += cross;
+    cx += (x0 + x1) * cross;
+    cy += (y0 + y1) * cross;
+  }
+  if (Math.abs(a) < 1e-9) return pts[Math.floor(pts.length / 2)];
+  return [cx / (3 * a), cy / (3 * a)];
+}
 
-/** Perfil longitudinal com terreno/greide + topos de rocha (RAM 2ª, RAD 3ª) e NA. */
-export function perfilGeologicoSvg(eixo: MtpPerfilEixo): string {
+/**
+ * Perfil longitudinal: terreno/greide + horizontes de rocha (RAM 2ª, RAD 3ª) e
+ * NA; quando o pacote v2/v3 traz, também as RACHURAS por material (polígonos
+ * hachurados por categoria) e os PALITOS de sondagem do DWG de perfil.
+ * `idx` torna os ids de <pattern> únicos entre múltiplos perfis na mesma página.
+ */
+export function perfilGeologicoSvg(eixo: MtpPerfilEixo, idx = 0): string {
+  const estratos = eixo.estratos ?? [];
+  const sondagens: MtpSondagemPerfil[] = eixo.sondagens ?? [];
+  const temEstratos = estratos.length > 0;
+
+  const matLabel = (e: (typeof estratos)[number]): string =>
+    e.material ||
+    [e.alteracao, e.litologia].filter(Boolean).join(" ") ||
+    e.formacao ||
+    "material";
+  const terrenoAt = (s: number): number | null => {
+    const pts = eixo.terreno ?? [];
+    if (!pts.length) return null;
+    if (s <= pts[0][0]) return pts[0][1];
+    if (s >= pts[pts.length - 1][0]) return pts[pts.length - 1][1];
+    for (let i = 1; i < pts.length; i++) {
+      if (pts[i][0] >= s) {
+        const [x0, y0] = pts[i - 1];
+        const [x1, y1] = pts[i];
+        return x1 === x0 ? y1 : y0 + ((y1 - y0) * (s - x0)) / (x1 - x0);
+      }
+    }
+    return pts[pts.length - 1][1];
+  };
+  const furoTopo = (f: MtpSondagemPerfil): number | null =>
+    f.cota_topo_m ?? terrenoAt(f.sta_m);
+  const furoProf = (f: MtpSondagemPerfil): number =>
+    f.prof_m ?? (f.camadas?.length ? f.camadas[f.camadas.length - 1].a_m : 0);
+  const polyArea = (pts: [number, number][]): number => {
+    let a = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const [x0, y0] = pts[i];
+      const [x1, y1] = pts[(i + 1) % pts.length];
+      a += x0 * y1 - x1 * y0;
+    }
+    return Math.abs(a) / 2;
+  };
+
+  const furoPts: [number, number][] = [];
+  for (const f of sondagens) {
+    const top = furoTopo(f);
+    if (top != null) furoPts.push([f.sta_m, top], [f.sta_m, top - furoProf(f)]);
+  }
   const all: [number, number][] = [
     ...(eixo.terreno ?? []),
     ...(eixo.greide ?? []),
     ...(eixo.topo_2cat ?? []).flatMap((l) => l.pts),
     ...(eixo.topo_3cat ?? []).flatMap((l) => l.pts),
+    ...estratos.flatMap((e) => (e.poligonos ?? []).flat()),
+    ...furoPts,
   ];
   if (all.length < 2)
     return '<p class="empty">Sem geometria suficiente para plotar o perfil.</p>';
   const W = 1000;
-  const H = 260;
+  const H = temEstratos ? 340 : sondagens.length ? 320 : 260;
   const padL = 58;
   const padR = 16;
   const padT = 22;
@@ -664,6 +780,10 @@ export function perfilGeologicoSvg(eixo: MtpPerfilEixo): string {
     pts.length
       ? pts.map((p, i) => `${i ? "L" : "M"}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join("")
       : "";
+  const ring = (pts: [number, number][]): string => {
+    const d = path(pts);
+    return d ? d + "Z" : "";
+  };
   const horizontes = (
     lines: { pts: [number, number][] }[],
     cor: string,
@@ -692,30 +812,119 @@ export function perfilGeologicoSvg(eixo: MtpPerfilEixo): string {
     )
     .join("");
 
+  // <pattern> de hachura por categoria (fundo tingido + diagonais)
+  const catsEstrato = new Set<number>();
+  for (const e of estratos) catsEstrato.add(e.categoria ?? 0);
+  const defs = temEstratos
+    ? `<defs>${[...catsEstrato]
+        .map((cat) => {
+          const cor = COR_CAT[cat] ?? COR_SLATE;
+          return `<pattern id="pg${idx}c${cat}" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="${cor}" fill-opacity="0.14"/><line x1="0" y1="0" x2="0" y2="7" stroke="${cor}" stroke-width="1" stroke-opacity="0.5"/></pattern>`;
+        })
+        .join("")}</defs>`
+    : "";
+
+  // rachuras por material (polígonos hachurados por categoria)
+  const rachuras = estratos
+    .map((e) => {
+      const cat = e.categoria ?? 0;
+      const cor = COR_CAT[cat] ?? COR_SLATE;
+      return (e.poligonos ?? [])
+        .map((poly) => {
+          const d = ring(poly);
+          return d
+            ? `<path d="${d}" fill="url(#pg${idx}c${cat})" stroke="${cor}" stroke-width="0.6" stroke-opacity="0.7"><title>${esc(matLabel(e))}${e.categoria ? ` · ${e.categoria}ª cat` : ""}</title></path>`
+            : "";
+        })
+        .join("");
+    })
+    .join("");
+  // um rótulo de material no maior polígono de cada estrato
+  const rotulos = estratos
+    .map((e) => {
+      const polys = e.poligonos ?? [];
+      if (!polys.length) return "";
+      let melhor = polys[0];
+      let melhorA = -1;
+      for (const p of polys) {
+        const a = polyArea(p);
+        if (a > melhorA) {
+          melhorA = a;
+          melhor = p;
+        }
+      }
+      const c = centroide(melhor);
+      if (!c) return "";
+      return `<text x="${X(c[0]).toFixed(1)}" y="${Y(c[1]).toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="9" fill="#f8fafc" paint-order="stroke" stroke="${COR.canvas}" stroke-width="2">${esc(matLabel(e))}</text>`;
+    })
+    .join("");
+
+  // palitos de sondagem (camadas por categoria + NA + rótulo)
+  const palitos = sondagens
+    .map((f) => {
+      const top = furoTopo(f);
+      if (top == null) return "";
+      const x = X(f.sta_m);
+      const yTop = Y(top);
+      const yBot = Y(top - furoProf(f));
+      const segs = (f.camadas ?? [])
+        .map((c) => {
+          const y0 = Y(top - c.de_m);
+          const y1 = Y(top - c.a_m);
+          if (!(y1 > y0 + 0.3)) return "";
+          const cor = COR_CAT[c.categoria ?? 0] ?? COR_SLATE;
+          return `<line x1="${x.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="${cor}" stroke-width="5" stroke-opacity="0.95"><title>${esc(`${fmt(c.de_m, 1)}–${fmt(c.a_m, 1)} m · N=${c.n_spt ?? "—"} · ${c.material}`)}</title></line>`;
+        })
+        .join("");
+      const base = `<line x1="${x.toFixed(1)}" y1="${yTop.toFixed(1)}" x2="${x.toFixed(1)}" y2="${yBot.toFixed(1)}" stroke="${COR_SLATE}" stroke-width="${segs ? 1 : 1.5}" stroke-opacity="${segs ? 0.5 : 0.85}"/>`;
+      const topDot = `<circle cx="${x.toFixed(1)}" cy="${yTop.toFixed(1)}" r="2.6" fill="#f8fafc"/>`;
+      const naDot =
+        f.na_m != null
+          ? `<circle cx="${x.toFixed(1)}" cy="${Y(top - f.na_m).toFixed(1)}" r="2.8" fill="${COR_NA}"><title>NA · ${fmt(f.na_m, 1)} m</title></circle>`
+          : "";
+      const rot = `<text x="${x.toFixed(1)}" y="${(yTop - 5).toFixed(1)}" text-anchor="middle" font-size="8" fill="#f8fafc" paint-order="stroke" stroke="${COR.canvas}" stroke-width="2">${esc(f.id)}</text>`;
+      return base + segs + topDot + naDot + rot;
+    })
+    .join("");
+
   // legenda (largura aproximada por caractere)
   const leg: [string, string, boolean][] = [
     [COR.terreno, "terreno", false],
     [COR.cyanClaro, "greide", false],
-    [COR.barreira, "RAM (2ª cat)", false],
-    [COR_RAD, "RAD/RS (3ª cat)", false],
-    [COR_NA, "NA", true],
   ];
+  if (temEstratos)
+    leg.push(
+      [COR_CAT[1], "1ª cat", false],
+      [COR_CAT[2], "2ª cat", false],
+      [COR_CAT[3], "3ª cat", false],
+    );
+  else leg.push([COR.barreira, "topo RAM (2ª)", false], [COR_RAD, "topo RAD (3ª)", false]);
+  if (sondagens.length) leg.push([COR_SLATE, "sondagem", false]);
+  leg.push([COR_NA, "NA", true]);
   let lx = padL;
   const legenda = leg
     .map(([cor, txt, dash]) => {
       const g = `<rect x="${lx}" y="6" width="10" height="10" rx="2" fill="${cor}"${dash ? ' fill-opacity="0.7"' : ""}/><text x="${lx + 14}" y="15" fill="${COR.tick}" font-size="11">${esc(txt)}</text>`;
-      lx += 14 + txt.length * 6.6 + 14;
+      lx += 14 + txt.length * 6.4 + 12;
       return g;
     })
     .join("");
 
+  // horizontes de rocha só quando NÃO há rachuras (senão a hachura já mostra)
+  const horizLinhas = temEstratos
+    ? ""
+    : horizontes(eixo.topo_3cat ?? [], COR_RAD, 2) +
+      horizontes(eixo.topo_2cat ?? [], COR.barreira, 2);
+
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Perfil geológico ${esc(eixo.titulo || eixo.eixo_id)}">
-  <rect x="0" y="0" width="${W}" height="${H}" fill="${COR.canvas}" rx="10"/>
+  ${defs}<rect x="0" y="0" width="${W}" height="${H}" fill="${COR.canvas}" rx="10"/>
   ${legenda}${yGrid}${xTicks}
+  ${rachuras}
   <path d="${path(eixo.greide ?? [])}" fill="none" stroke="${COR.cyanClaro}" stroke-width="1.3"/>
   <path d="${path(eixo.terreno ?? [])}" fill="none" stroke="${COR.terreno}" stroke-width="1.6"/>
-  ${horizontes(eixo.topo_3cat ?? [], COR_RAD, 2)}
-  ${horizontes(eixo.topo_2cat ?? [], COR.barreira, 2)}
+  ${horizLinhas}
   ${horizontes(eixo.na ?? [], COR_NA, 1.2, "4 3")}
+  ${rotulos}
+  ${palitos}
 </svg>`;
 }
