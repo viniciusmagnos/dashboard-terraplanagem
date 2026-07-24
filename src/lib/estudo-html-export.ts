@@ -31,7 +31,11 @@ import {
   type PlantaPonto,
 } from "./estudo-html-charts";
 import { fmt, fmtBRL, fmtKm } from "./format";
-import { areaMateriaisCorte, furoPerfilMaisProximo } from "./perfil-materiais";
+import {
+  areaMateriaisCorte,
+  corteCategoriaPorEixoSecao,
+  furoPerfilMaisProximo,
+} from "./perfil-materiais";
 import {
   drenagemDe,
   geotecniaDe,
@@ -732,6 +736,62 @@ function tabGeotecnia(
     );
   }
 
+  // Corte por categoria — comparação dos 3 métodos (m³) por eixo.
+  let comparativoBloco = "";
+  const geomEixos = input.pacote.geometria?.eixos ?? [];
+  if (pg && geomEixos.length) {
+    const horizM = new Map(
+      (pg.categorias_por_eixo ?? []).map((c) => [c.eixo_id, c]),
+    );
+    const furoM = new Map(
+      (geo.materiais?.por_eixo ?? []).map((m) => [m.eixo_id, m]),
+    );
+    const perfilEixoM = new Map(pg.eixos.map((e) => [e.eixo_id, e]));
+    const cmpCols: Col[] = [
+      { t: "Eixo" },
+      { t: "Método" },
+      { t: "1ª cat", r: true },
+      { t: "2ª cat", r: true },
+      { t: "3ª cat", r: true },
+      { t: "Total", r: true },
+      { t: "Rocha (2ª+3ª)", r: true },
+    ];
+    const cmpLinhas: string[][] = [];
+    for (const ge of geomEixos) {
+      const pe = perfilEixoM.get(ge.eixo_id);
+      if (!pe?.sondagens?.length) continue;
+      const secm = corteCategoriaPorEixoSecao(ge, pe.sondagens);
+      if (!secm) continue;
+      const hz = horizM.get(ge.eixo_id);
+      const fu = furoM.get(ge.eixo_id);
+      const metodos: [string, number | null, number | null, number | null][] = [
+        ["Horizontes (geólogo)", hz?.corte_1cat ?? null, hz?.corte_2cat ?? null, hz?.corte_3cat ?? null],
+        ["Furo SPT (laudos)", fu?.corte_1cat ?? null, fu?.corte_2cat ?? null, fu?.corte_3cat ?? null],
+        ["Seção × furo do perfil", secm.corte_1cat + secm.sem_cat, secm.corte_2cat, secm.corte_3cat],
+      ];
+      metodos.forEach(([nome, a1, a2, a3], mi) => {
+        const tem = a1 != null || a2 != null || a3 != null;
+        const t = (a1 ?? 0) + (a2 ?? 0) + (a3 ?? 0);
+        const rocha = (a2 ?? 0) + (a3 ?? 0);
+        cmpLinhas.push([
+          mi === 0 ? esc(nomeEixo(input.pacote, ge.eixo_id)) : "",
+          esc(nome),
+          a1 != null ? `<span class="em">${fmt(a1)}</span>` : "—",
+          a2 != null ? `<span class="am">${fmt(a2)}</span>` : "—",
+          a3 != null ? `<span class="ro">${fmt(a3)}</span>` : "—",
+          tem ? fmt(t) : "—",
+          tem && t > 0 ? `${fmt(rocha)} (${fmt((100 * rocha) / t, 0)}%)` : "—",
+        ]);
+      });
+    }
+    if (cmpLinhas.length)
+      comparativoBloco = card(
+        "Corte por categoria — comparação de métodos (m³)",
+        tabela(cmpCols, cmpLinhas),
+        "Volume de corte por categoria por eixo por três fontes independentes: horizontes do geólogo × furos SPT (laudos) × materiais da seção cruzados com o furo do perfil. Diferenças refletem a fonte do dado, não erro de cálculo. Camadas sem classificação contam como 1ª.",
+      );
+  }
+
   const LIM = 120;
   const furos = geo.sondagens.slice(0, LIM);
   const furoCols: Col[] = [
@@ -840,6 +900,7 @@ function tabGeotecnia(
     catBloco,
     matBloco,
     perfilBloco,
+    comparativoBloco,
     card("Sondagens", tabela(furoCols, furoLinhas) + nota),
     ensBloco,
   ].join("");
