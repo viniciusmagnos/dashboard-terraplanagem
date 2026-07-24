@@ -27,6 +27,7 @@ import { KpiCard } from "../KpiCard";
 import { ProvChip } from "../ProvChip";
 import { PlantaEixosSVG, type PlantaPonto } from "../geometria/PlantaEixosSVG";
 import { PerfilGeologicoView } from "./PerfilGeologicoView";
+import { ComparativoCategoriasView } from "./ComparativoCategoriasView";
 
 const COR_TIPO: Record<string, string> = {
   percussao: "#34d399",
@@ -309,6 +310,15 @@ export function GeotecniaTab({
 
       {/* Perfil geológico — horizontes oficiais do DWG */}
       {perfilGeo && <PerfilGeologicoView perfil={perfilGeo} geo={geo} />}
+
+      {/* Corte por categoria — comparação dos 3 métodos por eixo */}
+      {perfilGeo && (
+        <ComparativoCategoriasView
+          perfil={perfilGeo}
+          geo={geo}
+          geometria={pacote.geometria ?? null}
+        />
+      )}
 
       {/* Planta com furos */}
       {pacote.geometria && pontosPlanta.length > 0 && (

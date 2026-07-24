@@ -12,7 +12,7 @@
  * `terreno`/`plataforma` do bloco geometria — o componente aplica X/Y.
  */
 import { interpLinha, secaoBounds } from "./mtp-geometry";
-import type { MtpGeoSecao, MtpSondagemPerfil } from "./mtp";
+import type { MtpGeoEixo, MtpGeoSecao, MtpSondagemPerfil } from "./mtp";
 
 export interface ItemMaterialCorte {
   material: string;
@@ -217,5 +217,65 @@ export function areaMateriaisCorte(
     area_coberta_m2: Math.round(areaCoberta * 100) / 100,
     furo_id: furo.id,
     dist_m,
+  };
+}
+
+export interface CorteCategoriaEixo {
+  eixo_id: string;
+  corte_total: number;
+  corte_1cat: number;
+  corte_2cat: number;
+  corte_3cat: number;
+  /** volume de camadas sem categoria (material vazio + sem SPT) */
+  sem_cat: number;
+  n_secoes: number;
+}
+
+/**
+ * Integra o método da seção (corte × furo do perfil mais próximo) ao longo de
+ * um eixo → volume de corte (m³) por categoria. Cada seção contribui com
+ * ``fração_cat × area_corte × comprimento`` (comprimento = metade p/ cada
+ * vizinho). É a versão "total do eixo" do que a aba Seções mostra por seção.
+ */
+export function corteCategoriaPorEixoSecao(
+  geoEixo: MtpGeoEixo,
+  furos: MtpSondagemPerfil[] | undefined | null,
+  maxDist = 300,
+): CorteCategoriaEixo | null {
+  const secs = [...(geoEixo.secoes ?? [])].sort((a, b) => a.sta_m - b.sta_m);
+  if (secs.length === 0 || !furos?.length) return null;
+  let c1 = 0, c2 = 0, c3 = 0, sc = 0, tot = 0, n = 0;
+  for (let i = 0; i < secs.length; i++) {
+    const sec = secs[i];
+    if ((sec.area_corte ?? 0) <= 0.1) continue;
+    let sp: number;
+    if (secs.length === 1) sp = geoEixo.secoes_passo_m || 20;
+    else if (i === 0) sp = secs[1].sta_m - secs[0].sta_m;
+    else if (i === secs.length - 1) sp = secs[i].sta_m - secs[i - 1].sta_m;
+    else sp = (secs[i + 1].sta_m - secs[i - 1].sta_m) / 2;
+    if (!(sp > 0)) continue;
+    const fm = furoPerfilMaisProximo(furos, sec.sta_m, maxDist);
+    if (!fm) continue;
+    const r = areaMateriaisCorte(sec, fm.furo, fm.dist_m);
+    if (!r) continue;
+    for (const it of r.itens) {
+      const vol = it.fracao * sec.area_corte * sp;
+      if (it.categoria === 1) c1 += vol;
+      else if (it.categoria === 2) c2 += vol;
+      else if (it.categoria === 3) c3 += vol;
+      else sc += vol;
+    }
+    tot += sec.area_corte * sp;
+    n += 1;
+  }
+  if (n === 0) return null;
+  return {
+    eixo_id: geoEixo.eixo_id,
+    corte_total: tot,
+    corte_1cat: c1,
+    corte_2cat: c2,
+    corte_3cat: c3,
+    sem_cat: sc,
+    n_secoes: n,
   };
 }
