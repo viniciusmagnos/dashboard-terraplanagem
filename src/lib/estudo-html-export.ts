@@ -35,6 +35,7 @@ import {
   areaMateriaisCorte,
   corteCategoriaPorEixoSecao,
   furoPerfilMaisProximo,
+  type AreaMateriaisCorte,
 } from "./perfil-materiais";
 import {
   drenagemDe,
@@ -497,6 +498,38 @@ function tabPlanta(input: DadosEstudoInput): string {
   );
 }
 
+/** Tabela "Material escavado no corte desta seção" (espelha a aba Seções). */
+function tabelaMaterialSecao(
+  am: AreaMateriaisCorte,
+  secao: { area_corte?: number | null },
+): string {
+  const oficial = secao.area_corte ?? 0;
+  const cols: Col[] = [
+    { t: "Material" },
+    { t: "SPT", r: true },
+    { t: "Cat.", r: true },
+    { t: "Área (m²)", r: true },
+    { t: "%", r: true },
+  ];
+  const linhas = am.itens.map((it) => [
+    esc(it.material) + (it.extrapolado ? ' <span class="mut">(extrapolado)</span>' : ""),
+    it.n_min == null
+      ? "—"
+      : it.n_min === it.n_max
+        ? String(it.n_min)
+        : `${it.n_min}–${it.n_max}`,
+    it.categoria
+      ? `<span class="${it.categoria === 1 ? "em" : it.categoria === 2 ? "am" : "ro"}">${it.categoria}ª</span>`
+      : "—",
+    fmt(it.fracao * oficial, 1),
+    `${fmt(it.fracao * 100, 0)}%`,
+  ]);
+  const cob =
+    am.area_corte_m2 > 0 ? Math.round((100 * am.area_coberta_m2) / am.area_corte_m2) : 0;
+  const cap = `<p class="ref">Material escavado no corte — furo ${esc(am.furo_id)} a ${fmt(am.dist_m, 0)} m · corte ${fmt(oficial, 1)} m² · cobertura ${cob}%. Composição por profundidade abaixo do terreno, rateada ao corte da seção; camadas sem classificação contam como 1ª.</p>`;
+  return tabela(cols, linhas) + cap;
+}
+
 function tabSecoes(input: DadosEstudoInput): {
   html: string;
   mapa: Record<string, string>;
@@ -544,15 +577,17 @@ function tabSecoes(input: DadosEstudoInput): {
       const key = `${ge.eixo_id}|${sec.sta_m}`;
       // furo do perfil mais próximo → faixas de material no corte + cota do NA
       const furo = furoPerfilMaisProximo(sonds, sec.sta_m, 300);
-      const bandas =
+      const am =
         furo && (sec.area_corte ?? 0) > 0.1
-          ? areaMateriaisCorte(sec, furo.furo, furo.dist_m)?.bandas ?? null
+          ? areaMateriaisCorte(sec, furo.furo, furo.dist_m)
           : null;
       const naCotaRel =
         furo?.furo.na_m != null && furo.furo.cota_topo_m != null
           ? furo.furo.cota_topo_m - furo.furo.na_m - zOff
           : null;
-      mapa[key] = secaoTransversalSvg(sec, zOff, { bandas, naCotaRel });
+      mapa[key] =
+        secaoTransversalSvg(sec, zOff, { bandas: am?.bandas ?? null, naCotaRel }) +
+        (am && am.itens.length ? tabelaMaterialSecao(am, sec) : "");
       opts += `<option value="${esc(key)}">${esc(staToKmLabel(sec.sta_m))}</option>`;
       if (primeira == null) primeira = key;
       mostradas++;
