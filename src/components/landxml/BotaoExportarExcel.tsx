@@ -51,8 +51,8 @@ export function BotaoExportarExcel() {
     },
     {
       tipo: "geotecnia",
-      rotulo: "Sondagens (todas)",
-      detalhe: "Furos, camadas e materiais por eixo",
+      rotulo: "Geotecnia (sondagens)",
+      detalhe: "Furos, camadas, litologia do corte, umidade e ensaios lab",
       indisponivel: temSondagens ? null : "Pacote sem sondagens",
     },
     {
