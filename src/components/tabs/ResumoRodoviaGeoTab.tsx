@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Layers3 } from "lucide-react";
 import { fmt } from "../../lib/format";
 import { geotecniaDe } from "../../lib/mtp";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
 
@@ -72,7 +72,7 @@ export function ResumoRodoviaGeoTab({ accent }: { accent: string }) {
         icon={Layers3}
         titulo="Resumo por rodovia"
         subtitulo={`${geo.resumo.n_total} sondagens · ${geo.resumo.n_posicionadas} posicionadas em ${linhas.length} eixos`}
-        right={<ProvChip pacote={pacote} bloco="sondagens" />}
+        right={<ChipFonte pacote={pacote} bloco="sondagens" />}
       />
 
       <div className="bg-surface border border-border rounded-lg overflow-hidden">

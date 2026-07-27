@@ -1,6 +1,6 @@
 import { fmt } from "../../lib/format";
 import { staToKmLabel } from "../../lib/mtp";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SlotBlocos } from "../dynamic/SlotBlocos";
 
@@ -13,7 +13,11 @@ export function VisaoTab() {
   const kpis = [
     { rot: "Corte", val: `${fmt(vb.corteTotal)} m³`, chip: "volumes_base.corteTotal" },
     { rot: "Aterro (m³c)", val: `${fmt(vb.aterroFc)} m³`, chip: "volumes_base.aterroFc" },
-    { rot: "Pavimento", val: `${fmt(vb.pavimento ?? null)} m³`, chip: "bins" },
+    {
+      rot: "Pavimento",
+      val: `${fmt(vb.pavimento ?? null)} m³`,
+      chip: "volumes_base.pavimento",
+    },
     {
       rot: "Momento",
       val: `${fmt(br?.totals["momento_m3km"] as number | null)} m³·km`,
@@ -35,7 +39,7 @@ export function VisaoTab() {
           <div key={kpi.rot} className="bg-surface border border-border rounded-lg p-3">
             <div className="flex items-center justify-between gap-1">
               <p className="text-xs text-muted-foreground">{kpi.rot}</p>
-              <ProvChip pacote={pacote} bloco={kpi.chip} />
+              <ChipFonte pacote={pacote} bloco={kpi.chip} />
             </div>
             <p className="text-base font-semibold mt-1">{kpi.val}</p>
           </div>
@@ -44,7 +48,7 @@ export function VisaoTab() {
 
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         <div className="px-4 py-2.5 border-b border-border flex items-center gap-2 text-sm font-medium">
-          Eixos do projeto <ProvChip pacote={pacote} bloco="eixos" />
+          Eixos do projeto <ChipFonte pacote={pacote} bloco="eixos" />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

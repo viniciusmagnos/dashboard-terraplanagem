@@ -1,7 +1,7 @@
 import { Route } from "lucide-react";
 import { fmt } from "../../lib/format";
 import { staToKmLabel } from "../../lib/mtp";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
 
@@ -19,7 +19,7 @@ export function RodoviasTab({ accent }: { accent: string }) {
         icon={Route}
         titulo="Rodovias e eixos"
         subtitulo={`${eixos.length} eixos · ${fmt(pacote.extensoes.total, 2)} km de extensão`}
-        right={<ProvChip pacote={pacote} bloco="eixos" />}
+        right={<ChipFonte pacote={pacote} bloco="eixos" />}
       />
 
       <div className="grid gap-3 md:grid-cols-4">

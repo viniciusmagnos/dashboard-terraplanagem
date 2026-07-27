@@ -1,7 +1,7 @@
 import { ClipboardList } from "lucide-react";
 import { fmt, fmtBRL, fmtBRLCompacto } from "../../lib/format";
 import { KpiCard } from "../landxml/KpiCard";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
 
@@ -27,7 +27,7 @@ export function ResumoExecutivoTab({ accent }: { accent: string }) {
             {ehBase ? " (referência)" : " — comparado ao caso base"}
           </>
         }
-        right={<ProvChip prov="computed" />}
+        right={<ChipFonte prov="computed" bloco="bruckner" />}
       />
 
       <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">

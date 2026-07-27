@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Workflow } from "lucide-react";
 import { simultaneidadeDe } from "../../lib/pacote-ext";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
 import { EmptyStateAguardando } from "../ui/EmptyStateAguardando";
@@ -40,7 +40,7 @@ export function SimultaneidadeTab({ accent }: { accent: string }) {
         icon={Workflow}
         titulo="Análise de simultaneidade"
         subtitulo={`${sim.frentes.length} frentes concorrentes · ${maxDia} dias`}
-        right={<ProvChip pacote={pacote} bloco="analise_simultaneidade" />}
+        right={<ChipFonte pacote={pacote} bloco="analise_simultaneidade" />}
       />
 
       <div className="bg-surface border border-border rounded-lg p-4 space-y-2 overflow-x-auto">

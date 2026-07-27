@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { FlaskConical } from "lucide-react";
 import { fmt } from "../../lib/format";
 import { geotecniaDe } from "../../lib/mtp";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
 
@@ -42,7 +42,7 @@ export function EnsaiosCbrTab({ accent }: { accent: string }) {
         icon={FlaskConical}
         titulo="Ensaios CBR"
         subtitulo={`${ensaios.length} ensaio(s) com CBR · média ${fmt(cbrMedio, 1)}%`}
-        right={<ProvChip pacote={pacote} bloco="sondagens" />}
+        right={<ChipFonte pacote={pacote} bloco="sondagens" />}
       />
 
       {ensaios.length === 0 ? (

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { BarChart3 } from "lucide-react";
 import { fmt } from "../../lib/format";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
 import { EmptyStateAguardando } from "../ui/EmptyStateAguardando";
@@ -51,7 +51,7 @@ export function MatrizDmtTab({ accent }: { accent: string }) {
         icon={BarChart3}
         titulo="Análise (Matriz DMT)"
         subtitulo={`${linhas.length} faixas · ${fmt(totalVol)} m³ compensados · ${fmt(totalMom)} m³·km`}
-        right={<ProvChip prov="computed" />}
+        right={<ChipFonte prov="computed" bloco="bruckner" />}
       />
 
       <div className="bg-surface border border-border rounded-lg overflow-hidden">

@@ -1,7 +1,7 @@
 import { Trash2 } from "lucide-react";
 import { fmt, fmtKm } from "../../lib/format";
 import { KpiCard } from "../landxml/KpiCard";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { botaForasDe } from "../../lib/pacote-ext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
@@ -19,7 +19,7 @@ export function BotaForasTab({ accent }: { accent: string }) {
         icon={Trash2}
         titulo="Bota-foras (sobra)"
         subtitulo={`Cenário: ${ativo.def.nome}`}
-        right={<ProvChip prov="computed" />}
+        right={<ChipFonte prov="computed" bloco="volumes_base.bfTotal" />}
       />
 
       <div className="grid gap-3 md:grid-cols-4">
@@ -32,7 +32,7 @@ export function BotaForasTab({ accent }: { accent: string }) {
       {bfs.length > 0 ? (
         <div className="bg-surface border border-border rounded-lg overflow-hidden">
           <div className="px-4 py-2.5 border-b border-border text-sm font-medium flex items-center gap-2">
-            Cadastro de bota-foras ({bfs.length}) <ProvChip pacote={pacote} bloco="recursos" />
+            Cadastro de bota-foras ({bfs.length}) <ChipFonte pacote={pacote} bloco="recursos" />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

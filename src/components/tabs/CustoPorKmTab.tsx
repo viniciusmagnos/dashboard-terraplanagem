@@ -1,7 +1,7 @@
 import { Ruler } from "lucide-react";
 import { fmt, fmtBRL, fmtBRLCompacto } from "../../lib/format";
 import { KpiCard } from "../landxml/KpiCard";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
 
@@ -28,7 +28,7 @@ export function CustoPorKmTab({ accent }: { accent: string }) {
         icon={Ruler}
         titulo="Custo por km"
         subtitulo={`Cenário: ${ativo.def.nome} · ${fmt(kmTotal, 2)} km (${fmt(kmComServico, 2)} km com serviço)`}
-        right={<ProvChip prov="computed" />}
+        right={<ChipFonte prov="computed" bloco="custos" />}
       />
 
       <div className="grid gap-3 md:grid-cols-3">

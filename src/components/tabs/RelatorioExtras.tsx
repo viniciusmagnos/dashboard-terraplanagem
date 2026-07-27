@@ -2,7 +2,7 @@ import { Download, FileText, Package } from "lucide-react";
 import { fmt } from "../../lib/format";
 import { BotaoExportarExcel } from "../landxml/BotaoExportarExcel";
 import { BotaoExportarHtml } from "../landxml/BotaoExportarHtml";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
 
@@ -51,7 +51,7 @@ export function ExportarPacoteTab({ accent }: { accent: string }) {
         icon={Package}
         titulo="Exportar pacote"
         subtitulo={`${pacote.schema} v${pacote.schema_version}`}
-        right={<ProvChip prov="extracted" />}
+        right={<ChipFonte prov="extracted" />}
       />
       <section className="bg-surface border border-border rounded-lg p-4">
         <dl className="text-sm grid gap-1 md:grid-cols-2">

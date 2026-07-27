@@ -1,6 +1,6 @@
 import { Database } from "lucide-react";
 import { fmtBRL, fmtPct } from "../../lib/format";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
 
@@ -22,7 +22,7 @@ export function BancoCenariosTab({ accent }: { accent: string }) {
         icon={Database}
         titulo="Banco de dados de cenários"
         subtitulo={`${cenarios.length} cenário(s) salvo(s) + caso base`}
-        right={<ProvChip prov="computed" />}
+        right={<ChipFonte prov="computed" />}
       />
 
       <div className="bg-surface border border-border rounded-lg overflow-hidden">

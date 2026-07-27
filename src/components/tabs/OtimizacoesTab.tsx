@@ -2,7 +2,7 @@ import { Lightbulb } from "lucide-react";
 import { fmt, fmtBRLCompacto } from "../../lib/format";
 import { otimizacoesDe, type OtimCard } from "../../lib/pacote-ext";
 import { KpiCard } from "../landxml/KpiCard";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
 import { EmptyStateAguardando } from "../ui/EmptyStateAguardando";
@@ -52,7 +52,7 @@ export function OtimizacoesTab({
         icon={Lightbulb}
         titulo={titulo}
         subtitulo={`${cards.length} oportunidade(s) de otimização`}
-        right={<ProvChip pacote={pacote} bloco="otimizacoes" />}
+        right={<ChipFonte pacote={pacote} bloco="otimizacoes" />}
       />
 
       <div className="grid gap-3 md:grid-cols-2">

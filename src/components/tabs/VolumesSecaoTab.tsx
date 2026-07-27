@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import { Boxes } from "lucide-react";
 import { fmt } from "../../lib/format";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
 
@@ -56,7 +56,7 @@ export function VolumesSecaoTab({ accent }: { accent: string }) {
         icon={Boxes}
         titulo="Volumes por seção"
         subtitulo={`${fmt(pacote.bins.length)} seções de ${larguraBin} m · ${linhas.length} eixos`}
-        right={<ProvChip pacote={pacote} bloco="bins" />}
+        right={<ChipFonte pacote={pacote} bloco="bins" />}
       />
 
       <div className="bg-surface border border-border rounded-lg p-3">

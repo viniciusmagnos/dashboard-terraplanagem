@@ -1,6 +1,6 @@
 import { CheckCircle2, XCircle, Activity } from "lucide-react";
 import { fmt } from "../../lib/format";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
 import { EmptyStateAguardando } from "../ui/EmptyStateAguardando";
@@ -41,7 +41,7 @@ export function ValidacaoFisicaTab({ accent }: { accent: string }) {
         icon={Activity}
         titulo="Validação exec. física"
         subtitulo="Fechamento do balanço de massas do cenário ativo"
-        right={<ProvChip prov="computed" />}
+        right={<ChipFonte prov="computed" bloco="bruckner" />}
       />
 
       <div className="grid gap-4 md:grid-cols-2">

@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { MapPin } from "lucide-react";
 import { geotecniaDe } from "../../lib/mtp";
 import { jazidasDe, botaForasDe } from "../../lib/pacote-ext";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
 
@@ -111,7 +111,7 @@ export function MapaGeotecniaTab({ accent }: { accent: string }) {
         icon={MapPin}
         titulo="Mapa interativo"
         subtitulo={`${pontos.length} pontos posicionados (coordenadas UTM do projeto)`}
-        right={<ProvChip pacote={pacote} bloco="sondagens" />}
+        right={<ChipFonte pacote={pacote} bloco="sondagens" />}
       />
 
       {pontos.length === 0 ? (

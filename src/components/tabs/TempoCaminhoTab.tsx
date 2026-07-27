@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import { Route } from "lucide-react";
 import { tempoCaminhoDe } from "../../lib/pacote-ext";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
 import { EmptyStateAguardando } from "../ui/EmptyStateAguardando";
@@ -64,7 +64,7 @@ export function TempoCaminhoTab({ accent }: { accent: string }) {
         icon={Route}
         titulo="Tempo × caminho"
         subtitulo={`${tc.series.length} série(s)`}
-        right={<ProvChip pacote={pacote} bloco="tempo_caminho" />}
+        right={<ChipFonte pacote={pacote} bloco="tempo_caminho" />}
       />
 
       <div className="bg-surface border border-border rounded-lg p-3">

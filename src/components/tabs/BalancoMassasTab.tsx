@@ -1,6 +1,6 @@
 import { Scale } from "lucide-react";
 import { fmt } from "../../lib/format";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { BrucknerChart } from "../landxml/BrucknerChart";
 import { QuadroOrigemDestino } from "../landxml/cenarios/QuadroOrigemDestino";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
@@ -23,7 +23,7 @@ export function BalancoMassasTab({ accent }: { accent: string }) {
             ? `Corte ${fmt(br.totals.v_corte)} m³ · Aterro ${fmt(br.totals.v_aterro)} m³ · Compensado ${fmt(br.totals.volume_compensado)} m³`
             : undefined
         }
-        right={<ProvChip prov="computed" />}
+        right={<ChipFonte prov="computed" bloco="bruckner" />}
       />
 
       {br ? (

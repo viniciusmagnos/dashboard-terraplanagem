@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { CalendarRange } from "lucide-react";
 import { cronogramaDe, type CronoTarefa } from "../../lib/pacote-ext";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
 import { EmptyStateAguardando } from "../ui/EmptyStateAguardando";
@@ -55,7 +55,7 @@ export function CronogramaTab({ accent }: { accent: string }) {
         icon={CalendarRange}
         titulo="Cronograma Gantt"
         subtitulo={`${tarefas.length} tarefas · ${maxDia} dias${crono.t0 ? ` · início ${new Date(crono.t0).toLocaleDateString("pt-BR")}` : ""}`}
-        right={<ProvChip pacote={pacote} bloco="cronograma" />}
+        right={<ChipFonte pacote={pacote} bloco="cronograma" />}
       />
 
       {opcoes.length > 1 ? (

@@ -1,7 +1,7 @@
 import { GitBranch } from "lucide-react";
 import { fmt, fmtBRLCompacto, fmtKm } from "../../lib/format";
 import { KpiCard } from "../landxml/KpiCard";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
 import { SlotBlocos } from "../dynamic/SlotBlocos";
@@ -24,7 +24,7 @@ export function CenarioVisaoTab({ accent }: { accent: string }) {
         icon={GitBranch}
         titulo={ativo.def.nome}
         subtitulo={ativo.def.descricao ?? (ehBase ? "Parâmetros e premissas do pacote" : "Cenário derivado")}
-        right={<ProvChip prov={ehBase ? "default" : "manual"} />}
+        right={<ChipFonte prov={ehBase ? "default" : "manual"} bloco="premissas_default" />}
       />
 
       <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">

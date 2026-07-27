@@ -21,7 +21,8 @@ import { MainNavigation } from "../components/shell/MainNavigation";
 import { ColunaSubAbas } from "../components/shell/ColunaSubAbas";
 import { Watermark } from "../components/shell/Watermark";
 import { Footer } from "../components/shell/Footer";
-import { navComDinamicas, type TopTabId } from "../components/shell/nav";
+import { navComDinamicas, secaoDaSub, type TopTabId } from "../components/shell/nav";
+import { NavegacaoProvider } from "../components/shell/NavegacaoContext";
 
 // Abas app-local existentes
 import { VisaoTab } from "../components/tabs/VisaoTab";
@@ -66,6 +67,7 @@ import { DmePanel } from "../components/landxml/cenarios/DmePanel";
 // Primitivos app-local
 import { SeletorCenarioBar } from "../components/ui/SeletorCenarioBar";
 import { EmptyStateAguardando } from "../components/ui/EmptyStateAguardando";
+import { AvisoProveniencia } from "../components/ui/AvisoProveniencia";
 // Assistente IA embutido (AskCAD modo landxml_dashboard)
 import { AssistentePanel } from "../components/askcad/AssistentePanel";
 // Motor de componentes dinâmicos (layout dirigido pela Dashboard Spec)
@@ -169,6 +171,20 @@ function SyncBadge({ status }: { status: SyncStatus }) {
   );
 }
 
+/**
+ * Blocos de dado que alimentam cada sub-aba. Serve ao aviso de proveniência:
+ * quando o bloco é `example` E está no pacote, o painel exibe número de
+ * demonstração e isso precisa ficar explícito no topo da aba.
+ */
+const BLOCOS_DA_SUB: Record<string, string[]> = {
+  cronograma: ["cronograma"],
+  simultaneidade: ["analise_simultaneidade", "produtividades"],
+  "tempo-caminho": ["tempo_caminho"],
+  "otim-sem-geo": ["otimizacoes"],
+  "otim-com-geo": ["otimizacoes"],
+  prazo: ["produtividades", "praticabilidade", "transferencias_equipamentos"],
+};
+
 function ShellInterno({
   pacote,
   onPacoteAtualizado,
@@ -203,6 +219,18 @@ function ShellInterno({
     setTop(topId);
     setSub(subId);
   }, []);
+
+  // Navegação exposta por contexto: chips de fonte e avisos de proveniência
+  // (profundos na árvore) mandam o usuário para a aba Rastreabilidade.
+  const irParaSub = useCallback((subId: string) => {
+    const topId = secaoDaSub(subId);
+    if (topId) setTop(topId);
+    setSub(subId);
+  }, []);
+  const ctxNav = useMemo(
+    () => ({ irParaSub, subAtiva: sub }),
+    [irParaSub, sub],
+  );
 
   const irParaSecao = useCallback(
     (sta: number, eixoId?: string | null) => {
@@ -313,6 +341,7 @@ function ShellInterno({
   };
 
   return (
+    <NavegacaoProvider value={ctxNav}>
     <div className="min-h-screen bg-background flex flex-col">
       <Watermark />
       <Header
@@ -344,6 +373,9 @@ function ShellInterno({
 
           <div className="flex-1 min-w-0 space-y-4">
             {top === "cenarios" && <SeletorCenarioBar accent={accent} />}
+            {BLOCOS_DA_SUB[sub] ? (
+              <AvisoProveniencia blocos={BLOCOS_DA_SUB[sub]} />
+            ) : null}
             {R[sub]?.() ??
               (spec.abas.some((a) => a.id === sub) ? (
                 <AbaDinamicaView abaId={sub} />
@@ -358,5 +390,6 @@ function ShellInterno({
       </main>
       <Footer />
     </div>
+    </NavegacaoProvider>
   );
 }

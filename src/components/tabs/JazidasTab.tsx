@@ -1,7 +1,7 @@
 import { Pickaxe } from "lucide-react";
 import { fmt, fmtBRL, fmtKm } from "../../lib/format";
 import { KpiCard } from "../landxml/KpiCard";
-import { ProvChip } from "../landxml/ProvChip";
+import { ChipFonte } from "../ui/ChipFonte";
 import { useEstudo } from "../landxml/cenarios/EstudoContext";
 import { jazidasDe } from "../../lib/pacote-ext";
 import { SecaoHeaderCard } from "../ui/SecaoHeaderCard";
@@ -19,7 +19,7 @@ export function JazidasTab({ accent }: { accent: string }) {
         icon={Pickaxe}
         titulo="Jazidas (empréstimo)"
         subtitulo={`Cenário: ${ativo.def.nome}`}
-        right={<ProvChip prov="computed" />}
+        right={<ChipFonte prov="computed" bloco="volumes_base.jazidaTotal" />}
       />
 
       <div className="grid gap-3 md:grid-cols-3">
@@ -31,7 +31,7 @@ export function JazidasTab({ accent }: { accent: string }) {
       {jazidas.length > 0 ? (
         <div className="bg-surface border border-border rounded-lg overflow-hidden">
           <div className="px-4 py-2.5 border-b border-border text-sm font-medium flex items-center gap-2">
-            Cadastro de jazidas ({jazidas.length}) <ProvChip pacote={pacote} bloco="recursos" />
+            Cadastro de jazidas ({jazidas.length}) <ChipFonte pacote={pacote} bloco="recursos" />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
