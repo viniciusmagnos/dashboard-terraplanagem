@@ -32,6 +32,13 @@ import {
 } from "./estudo-html-charts";
 import { fmt, fmtBRL, fmtKm } from "./format";
 import {
+  litologiaCortePorEixo,
+  rotuloBanda,
+  trechosLitologia,
+  trechosUmidade,
+  umidadeCortePorEixo,
+} from "./geotecnia-analise";
+import {
   areaMateriaisCorte,
   corteCategoriaPorEixoSecao,
   furoPerfilMaisProximo,
@@ -827,6 +834,165 @@ function tabGeotecnia(
       );
   }
 
+  // Corte em rocha por LITOLOGIA (rachuras do perfil × bins de corte).
+  let litoBloco = "";
+  if (pg) {
+    const horizM = new Map(
+      (pg.categorias_por_eixo ?? []).map((c) => [c.eixo_id, c]),
+    );
+    const litoEixos: string[][] = [];
+    const litoTrechos: string[][] = [];
+    for (const pe of pg.eixos) {
+      const r = litologiaCortePorEixo(pe, input.pacote.bins);
+      if (!r) continue;
+      const rocha = r.totais.filter((t) => t.categoria >= 2);
+      const c3 = rocha
+        .filter((t) => t.categoria === 3)
+        .reduce((s, t) => s + t.v_m3, 0);
+      const hz = horizM.get(r.eixo_id);
+      litoEixos.push([
+        esc(nomeEixo(input.pacote, r.eixo_id)),
+        fmt(r.v_corte_total),
+        rocha.length
+          ? rocha
+              .map((t) => {
+                const cls = t.categoria === 3 ? "ro" : "am";
+                return `<span class="${cls}">${t.categoria}ª ${esc(t.litologia)}: ${fmt(t.v_m3)}</span>`;
+              })
+              .join(" · ")
+          : '<span class="mut">sem rocha no corte (tudo 1ª cat)</span>',
+        c3 > 0.5 ? `<span class="ro">${fmt(c3)}</span>` : "—",
+        hz ? fmt(hz.corte_3cat) : "—",
+      ]);
+      for (const cat of [3, 2]) {
+        for (const t of trechosLitologia(r.rows, cat)) {
+          const cls = cat === 3 ? "ro" : "am";
+          litoTrechos.push([
+            `<span class="${cls}">${cat}ª</span>`,
+            esc(nomeEixo(input.pacote, t.eixo_id)),
+            `${esc(staToKmLabel(t.sta_a))} → ${esc(staToKmLabel(t.sta_b))}`,
+            fmt(t.sta_b - t.sta_a),
+            `<span class="${cls}">${fmt(t.v_total_m3)}</span>`,
+            t.porLito
+              .map((l) => `${fmt(l.v_m3)} m³ ${esc(l.litologia)}`)
+              .join(" · "),
+          ]);
+        }
+      }
+    }
+    if (litoEixos.length) {
+      const eixosTab = tabela(
+        [
+          { t: "Eixo" },
+          { t: "Corte (m³)", r: true },
+          { t: "Por litologia (m³)" },
+          { t: "Σ 3ª cat", r: true },
+          { t: "3ª horizontes", r: true },
+        ],
+        litoEixos,
+      );
+      const trechosTab = litoTrechos.length
+        ? `<p class="ref" style="margin-top:10px"><strong>Trechos com rocha no corte</strong></p>` +
+          tabela(
+            [
+              { t: "Cat." },
+              { t: "Eixo" },
+              { t: "Trecho" },
+              { t: "Ext. (m)", r: true },
+              { t: "m³", r: true },
+              { t: "Por litologia" },
+            ],
+            litoTrechos,
+          )
+        : "";
+      litoBloco = card(
+        "Corte em rocha por litologia (2ª/3ª categoria)",
+        eixosTab + trechosTab,
+        "Rachuras do perfil geológico (litologia × alteração: SR = solo residual → 1ª; RAM → 2ª; RAD/RS → 3ª) cruzadas com o corte por bin de 20 m — o que é a rocha de cada trecho. \"3ª horizontes\" = método do topo de rocha, para conferência.",
+      );
+    }
+  }
+
+  // Umidade natural do material escavado (ensaios lab × bins de corte).
+  let umidadeBloco = "";
+  {
+    const ru = umidadeCortePorEixo(
+      input.pacote.bins,
+      geo,
+      input.pacote.geometria ?? null,
+    );
+    if (ru) {
+      const nb = ru.bandas.length + 1;
+      const umCols: Col[] = [
+        { t: "Eixo" },
+        { t: "Corte (m³)", r: true },
+        ...Array.from({ length: nb }, (_, i) => ({
+          t: rotuloBanda(i, ru.bandas),
+          r: true,
+        })),
+        { t: "s/ ensaio", r: true },
+        { t: "s/ furo", r: true },
+        { t: "w̄ (%)", r: true },
+        { t: "Δ ótima", r: true },
+      ];
+      const umLinhas = [...ru.porEixo, ru.total].map((a) => [
+        a.eixo_id === "TOTAL"
+          ? "<strong>TOTAL</strong>"
+          : esc(nomeEixo(input.pacote, a.eixo_id)),
+        fmt(a.v_corte_total),
+        ...a.porBanda.map((v, i) =>
+          v > 0.5
+            ? i >= nb - 2
+              ? `<span class="cy">${fmt(v)}</span>`
+              : fmt(v)
+            : "—",
+        ),
+        a.v_sem_ensaio > 0.5 ? fmt(a.v_sem_ensaio) : "—",
+        a.v_sem_furo > 0.5 ? fmt(a.v_sem_furo) : "—",
+        a.w_medio != null ? fmt(a.w_medio, 1) : "—",
+        a.dw_ot != null ? `${a.dw_ot >= 0 ? "+" : ""}${fmt(a.dw_ot, 1)}` : "—",
+      ]);
+      let trechosHtml = "";
+      for (const wMin of [40, 50]) {
+        const ts = trechosUmidade(ru.rows, wMin);
+        if (!ts.length) continue;
+        trechosHtml +=
+          `<p class="ref" style="margin-top:10px"><strong>Regiões com umidade ≥ ${wMin}%</strong></p>` +
+          tabela(
+            [
+              { t: "Eixo" },
+              { t: "Trecho" },
+              { t: "Ext. (m)", r: true },
+              { t: `m³ (w ≥ ${wMin}%)`, r: true },
+              { t: "extrapolado", r: true },
+              { t: "w (%)", r: true },
+              { t: "Furos" },
+            ],
+            ts.map((t) => [
+              esc(nomeEixo(input.pacote, t.eixo_id)),
+              `${esc(staToKmLabel(t.sta_a))} → ${esc(staToKmLabel(t.sta_b))}`,
+              fmt(t.sta_b - t.sta_a),
+              `<span class="cy">${fmt(t.v_m3 + t.v_extrap_m3)}</span>`,
+              t.v_extrap_m3 > 0.5 ? fmt(t.v_extrap_m3) : "—",
+              t.w_min === t.w_max
+                ? fmt(t.w_medio, 1)
+                : `${fmt(t.w_min, 1)}–${fmt(t.w_max, 1)} (${fmt(t.w_medio, 1)})`,
+              esc(t.furos.join(", ")),
+            ]),
+          );
+      }
+      const pct =
+        ru.total.v_corte_total > 0
+          ? Math.round((100 * ru.total.v_coberto) / ru.total.v_corte_total)
+          : 0;
+      umidadeBloco = card(
+        "Umidade natural do material escavado (m³ por faixa)",
+        tabela(umCols, umLinhas) + trechosHtml,
+        `Ensaios de laboratório (${ru.n_amostras} amostras de ${ru.n_furos_ensaio} furos) cruzados com o corte por bin de 20 m — furo ensaiado mais próximo (≤ 300 m), rateio pela profundidade amostrada; a amostra mais funda é extrapolada até o fundo do corte. Cobertura: ${fmt(ru.total.v_coberto)} m³ (${pct}% do corte). "Δ ótima" = w natural − w ótima do Proctor (p.p.).`,
+      );
+    }
+  }
+
   const LIM = 120;
   const furos = geo.sondagens.slice(0, LIM);
   const furoCols: Col[] = [
@@ -936,6 +1102,8 @@ function tabGeotecnia(
     matBloco,
     perfilBloco,
     comparativoBloco,
+    litoBloco,
+    umidadeBloco,
     card("Sondagens", tabela(furoCols, furoLinhas) + nota),
     ensBloco,
   ].join("");

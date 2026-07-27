@@ -28,6 +28,8 @@ import { ProvChip } from "../ProvChip";
 import { PlantaEixosSVG, type PlantaPonto } from "../geometria/PlantaEixosSVG";
 import { PerfilGeologicoView } from "./PerfilGeologicoView";
 import { ComparativoCategoriasView } from "./ComparativoCategoriasView";
+import { LitologiaCorteView } from "./LitologiaCorteView";
+import { UmidadeMaterialView } from "./UmidadeMaterialView";
 
 const COR_TIPO: Record<string, string> = {
   percussao: "#34d399",
@@ -319,6 +321,12 @@ export function GeotecniaTab({
           geometria={pacote.geometria ?? null}
         />
       )}
+
+      {/* Corte em rocha por litologia (rachuras do perfil × bins) */}
+      <LitologiaCorteView pacote={pacote} onIrParaSecao={onIrParaSecao} />
+
+      {/* Umidade natural do material escavado (ensaios lab × bins) */}
+      <UmidadeMaterialView pacote={pacote} onIrParaSecao={onIrParaSecao} />
 
       {/* Planta com furos */}
       {pacote.geometria && pontosPlanta.length > 0 && (

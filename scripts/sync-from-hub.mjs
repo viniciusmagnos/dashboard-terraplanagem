@@ -22,12 +22,13 @@ if (!existsSync(HUB)) {
 
 // Arquivos puros/compartilhados a espelhar do hub (NÃO inclui auth.ts).
 const LIB_FILES = [
-  "mtp.ts", "mtp-geometry.ts", "perfil-materiais.ts", "bruckner.ts", "cenario.ts", "format.ts",
+  "mtp.ts", "mtp-geometry.ts", "perfil-materiais.ts", "geotecnia-analise.ts",
+  "bruckner.ts", "cenario.ts", "format.ts",
   "useNumericInput.ts", "api-client.ts", "auth-api.ts", "estudo-api.ts",
   "landxml-api.ts", "sondagem-api.ts", "pacote-store.ts", "users-search-api.ts",
   "theme.ts", "useResolvedTheme.ts", "estudo-html-export.ts", "estudo-html-charts.ts",
   "bruckner.test.ts", "cenario.test.ts", "cenario-parity.test.ts", "estudo-html-export.test.ts",
-  "perfil-materiais.test.ts",
+  "perfil-materiais.test.ts", "geotecnia-analise.test.ts",
 ];
 const LIB_DIRS = ["landxml-3d"];
 const COMP_DIRS = ["landxml"];

@@ -304,8 +304,16 @@ describe("gerarHtmlDashboard", () => {
 
 /** Pacote sintético com blocos geotecnia (ensaios + materiais) + drenagem. */
 function pacoteComBlocos(): MtpPacote {
+  const eixoId = pacote.eixos[0]?.id ?? "E1";
   return {
     ...pacote,
+    // bins determinísticos p/ os cruzamentos de litologia (corte no início do
+    // perfil sintético) e umidade (bin ao lado do furo SP-01 em sta 1000)
+    bins: [
+      { eixo_id: eixoId, sta_a: 0, sta_b: 20, v_corte: 1000, v_aterro: 0, v_pavimento: 0 },
+      { eixo_id: eixoId, sta_a: 20, sta_b: 40, v_corte: 800, v_aterro: 0, v_pavimento: 0 },
+      { eixo_id: eixoId, sta_a: 980, sta_b: 1000, v_corte: 500, v_aterro: 0, v_pavimento: 0 },
+    ],
     sondagens: {
       versao: 1,
       sondagens: [
@@ -428,6 +436,22 @@ function pacoteComBlocos(): MtpPacote {
                   [1000, 472],
                   [1000, 468],
                   [0, 485],
+                ],
+              ],
+            },
+            {
+              // intersecta a coluna de corte no início do perfil (sta < 400)
+              formacao: "Serra Geral",
+              litologia: "arenito",
+              alteracao: "RAD",
+              material: "RAD arenito",
+              categoria: 3,
+              poligonos: [
+                [
+                  [0, 499],
+                  [400, 499],
+                  [400, 486],
+                  [0, 486],
                 ],
               ],
             },
@@ -573,6 +597,22 @@ describe("exportação por abas (opção `abas`)", () => {
     const parsed = JSON.parse(extrairJson(html));
     expect(parsed.resumo.n_furos_com_ensaio).toBe(1);
     expect(parsed.resumo.n_amostras_lab).toBe(1);
+  });
+
+  it("relatório de geotecnia inclui litologia do corte e umidade por faixa", () => {
+    const html = gerarHtmlDashboard(montarInput({ pacote: pacoteComBlocos() }), {
+      incluirGeometria: false,
+      abas: ["geotecnia"],
+    });
+    // corte em rocha por litologia: estrato RAD arenito (3ª) intersecta o
+    // corte dos bins sintéticos em sta 0–40 → totais + trecho
+    expect(html).toContain("Corte em rocha por litologia");
+    expect(html).toContain("3ª arenito");
+    expect(html).toContain("Trechos com rocha no corte");
+    // umidade: furo SP-01 (w=22,5%) cobre o bin de sta 980–1000 → banda 20–30
+    expect(html).toContain("Umidade natural do material escavado");
+    expect(html).toContain("20–30%");
+    expect(html).toContain("Δ ótima");
   });
 });
 
