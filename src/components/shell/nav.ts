@@ -113,6 +113,7 @@ export const NAV: TopTab[] = [
       { id: "volumes-secao", label: "Volumes por seção" },
       { id: "secoes", label: "Seções transversais" },
       { id: "corredor3d", label: "3D do corredor" },
+      { id: "comparativo-secoes", label: "Conferência Civil 3D" },
       { id: "banco-dados", label: "Banco de dados" },
       { id: "fontes-xml", label: "LandXML bruto (IA)" },
     ],

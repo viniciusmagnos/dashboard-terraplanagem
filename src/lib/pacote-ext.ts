@@ -156,6 +156,91 @@ export function simultaneidadeDe(
   return s;
 }
 
+/* ── comparativo_secoes (conferência contra o Civil 3D) ─────── */
+//
+// Bloco de AUDITORIA: compara, estaca a estaca, as áreas de corte/aterro que o
+// dashboard extraiu com as que o Civil 3D exportou nas seções (CrossSectSurf
+// terreno + DATUM). Só existe quando o projetista gera as sample lines com as
+// superfícies do corredor — nem todo LandXML as traz (ver RELATORIO na pasta
+// _manta_dashboard do projeto).
+//
+// Convenção validada em 2026-07-29 no BR-376 Contorno de Ponta Grossa: a área
+// de corte/aterro do Civil 3D é `terreno × DATUM` (topo do subleito), com a
+// CFT (camada final de terraplenagem, ~0,60 m sob o DATUM) FORA da conta —
+// batendo com os polígonos da "Lista de Materiais" do próprio Civil 3D em
+// 0,003 %.
+
+export interface CompSecaoLinha {
+  /** Estaca em metros ao longo do eixo. */
+  sta: number;
+  /** Rótulo de estaca ("112+7.582"). */
+  est: string;
+  /** Área de corte do Civil 3D (terreno × DATUM), m². */
+  c_ref: number;
+  /** Área de aterro do Civil 3D (terreno × DATUM), m². */
+  f_ref: number;
+  /** Área de corte se a CFT entrasse na conta, m² (só informativo). */
+  c_cft?: number | null;
+  f_cft?: number | null;
+  /** Área dos polígonos da Lista de Materiais do Civil 3D, m² (quando existem). */
+  c_mat?: number | null;
+  f_mat?: number | null;
+  /** Volume do bin correspondente no pacote atual, m³. */
+  vc_dash?: number | null;
+  vf_dash?: number | null;
+  /** Volume recalculado com as áreas de referência, m³. */
+  vc_ref?: number | null;
+  vf_ref?: number | null;
+  /** A swath da sample line cortou a seção → área de referência SUBESTIMADA. */
+  trunc?: boolean;
+  /** Área absurda vs vizinhas (extrapolação do corredor) → descartada. */
+  extrap?: boolean;
+  /** Largura do terreno / do DATUM na seção, m (diagnóstico do truncamento). */
+  w_ter?: number | null;
+  w_dat?: number | null;
+}
+
+export interface CompSecaoEixo {
+  eixo_id: string;
+  linhas: CompSecaoLinha[];
+  n: number;
+  /** Nº de seções truncadas pela swath da sample line. */
+  n_trunc: number;
+  /** Nº de seções descartadas por extrapolação. */
+  n_extrap: number;
+  /** Rótulos das estacas descartadas ("112+7.582"). */
+  estacas_extrap: string[];
+  /** Fração (0–1) da área de aterro que cai em seção truncada. */
+  frac_aterro_trunc?: number;
+  /** Volumes: referência (Civil 3D) x pacote atual. */
+  v_ref: { corte: number; aterro: number };
+  v_dash: { corte: number; aterro: number };
+  /** Referência ANTES de descartar as extrapoladas (para mostrar o estrago). */
+  v_ref_bruto?: { corte: number; aterro: number };
+}
+
+export interface MtpComparativoSecoes {
+  versao: number;
+  /** Arquivo LandXML de onde vieram as seções de referência. */
+  fonte: string;
+  /** ISO da geração do bloco. */
+  gerado_em?: string;
+  /** Convenção usada na referência (texto curto para a tela). */
+  convencao?: string;
+  /** Volumes TIN×TIN do próprio Civil 3D (<SurfVolumes>), quando presentes. */
+  surf_volumes?: { nome: string; corte: number; aterro: number }[];
+  eixos: CompSecaoEixo[];
+  avisos?: string[];
+}
+
+export function comparativoSecoesDe(
+  pacote: MtpPacote | null,
+): MtpComparativoSecoes | null {
+  const c = bloco<MtpComparativoSecoes>(pacote, "comparativo_secoes");
+  if (!c || !Array.isArray(c.eixos) || c.eixos.length === 0) return null;
+  return c;
+}
+
 /* ── recursos.jazidas / recursos.botaForas ──────────────────── */
 
 export interface Jazida {

@@ -53,6 +53,7 @@ import { OtimizacoesTab } from "../components/tabs/OtimizacoesTab";
 import { SimultaneidadeTab } from "../components/tabs/SimultaneidadeTab";
 import { RelatorioCompletoTab, ExportarPacoteTab } from "../components/tabs/RelatorioExtras";
 import { FontesXmlTab } from "../components/tabs/FontesXmlTab";
+import { ComparativoSecoesTab } from "../components/tabs/ComparativoSecoesTab";
 // Painéis do core (vendorados) reutilizados como sub-abas
 import { SecoesTab, type GeoSel } from "../components/landxml/geometria/SecoesTab";
 import { GeotecniaTab } from "../components/landxml/geotecnia/GeotecniaTab";
@@ -293,6 +294,12 @@ function ShellInterno({
         <GeometriaTab pacote={pacote} sel={geoSel} onSel={setGeoSel} />,
         "Carregando o motor 3D…",
       ),
+    "comparativo-secoes": () => (
+      <ComparativoSecoesTab
+        accent={accent}
+        onIrParaSecao={(sta, eixoId) => irParaSecao(sta, eixoId)}
+      />
+    ),
     "banco-dados": () => <BancoCenariosTab accent={accent} />,
     "fontes-xml": () => <FontesXmlTab accent={accent} />,
     // Cenários
