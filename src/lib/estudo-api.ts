@@ -251,6 +251,7 @@ export type ExportTipo =
   | "bruckner"
   | "volumes"
   | "geotecnia"
+  | "materiais"
   | "drenagem"
   | "orcamento"
   | "comparativo"

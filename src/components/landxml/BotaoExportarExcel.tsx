@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { ChevronDown, FileSpreadsheet, Loader2 } from "lucide-react";
 import { urlExportEstudo, type ExportTipo } from "../../lib/estudo-api";
-import { drenagemDe, geotecniaDe } from "../../lib/mtp";
+import { drenagemDe, geotecniaDe, perfilGeologicoDe } from "../../lib/mtp";
 import { useEstudo } from "./cenarios/EstudoContext";
 
 /** Espera o push debounced (300 ms) do EstudoContext chegar ao servidor. */
@@ -29,6 +29,11 @@ export function BotaoExportarExcel() {
   const temSondagens = !!geotecniaDe(pacote)?.sondagens?.length;
   const temDrenagem = !!drenagemDe(pacote)?.dispositivos?.length;
   const temBruckner = ativo.bruckner != null;
+  // Material do corte exige a litologia descrita por furo — só existe no
+  // perfil_geologico versão ≥ 2 (a v1 traz apenas os horizontes de categoria).
+  const temMateriais =
+    temGeometria &&
+    !!perfilGeologicoDe(pacote)?.eixos?.some((e) => e.sondagens?.some((f) => f.camadas?.length));
 
   const opcoes: Opcao[] = [
     { tipo: "geral", rotulo: "Dados gerais", detalhe: "KPIs, extensões e eixos" },
@@ -54,6 +59,14 @@ export function BotaoExportarExcel() {
       rotulo: "Geotecnia (sondagens)",
       detalhe: "Furos, camadas, litologia do corte, umidade e ensaios lab",
       indisponivel: temSondagens ? null : "Pacote sem sondagens",
+    },
+    {
+      tipo: "materiais",
+      rotulo: "Material do corte",
+      detalhe: "Camadas por seção, área e volume por material, com umidade",
+      indisponivel: temMateriais
+        ? null
+        : "Exige geometria + perfil geológico COM sondagens (camadas descritas)",
     },
     {
       tipo: "drenagem",
